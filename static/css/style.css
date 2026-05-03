@@ -1,0 +1,46 @@
+/* HandyBridge Custom Styles */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+.navbar-brand {
+    font-size: 1.4rem;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.btn-primary {
+    background-color: #2E4057;
+    border-color: #2E4057;
+}
+
+.btn-primary:hover {
+    background-color: #1e2d3d;
+    border-color: #1e2d3d;
+}
+
+.bg-primary {
+    background-color: #2E4057 !important;
+}
+
+.text-primary {
+    color: #2E4057 !important;
+}
+
+.badge {
+    font-weight: 500;
+}

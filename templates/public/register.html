@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Register - HandyBridge{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h3 class="text-center mb-4">Create Your Account</h3>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name *</label>
+                                <input type="text" name="first_name" class="form-control" value="{{ form.get('first_name','') }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name *</label>
+                                <input type="text" name="last_name" class="form-control" value="{{ form.get('last_name','') }}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email *</label>
+                            <input type="email" name="email" class="form-control" value="{{ form.get('email','') }}" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Password *</label>
+                                <input type="password" name="password" class="form-control" minlength="8" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Confirm Password *</label>
+                                <input type="password" name="confirm_password" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" name="phone" class="form-control" value="{{ form.get('phone','') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Street Address</label>
+                            <input type="text" name="street_address" class="form-control" value="{{ form.get('street_address','') }}">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label">City</label>
+                                <input type="text" name="city" class="form-control" value="{{ form.get('city','') }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">State</label>
+                                <input type="text" name="state" class="form-control" maxlength="2" value="{{ form.get('state','') }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Zip Code</label>
+                                <input type="text" name="zip_code" class="form-control" value="{{ form.get('zip_code','') }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">I want to *</label>
+                            <select name="account_type" class="form-select" required>
+                                <option value="client">Hire service providers (Client)</option>
+                                <option value="provider">Offer my services (Provider)</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Create Account</button>
+                    </form>
+                    <p class="text-center mt-3 mb-0">
+                        Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

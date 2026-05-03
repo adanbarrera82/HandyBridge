@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}{{ provider.First_Name }} {{ provider.Last_Name }} - HandyBridge{% endblock %}
+{% block content %}
+<div class="container py-4">
+
+    <a href="{{ url_for('search') }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}" class="btn btn-outline-secondary btn-sm mb-4">
+        <i class="fas fa-arrow-left"></i> Back to Results
+    </a>
+
+    <!-- Provider Header -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-3">
+                {% if provider.Profile_Image_URL %}
+                <img src="{{ provider.Profile_Image_URL }}" alt="Profile" class="rounded-circle" style="width:80px;height:80px;object-fit:cover;">
+                {% else %}
+                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold fs-3 flex-shrink-0" style="width:80px;height:80px;">
+                    {{ provider.First_Name[0] }}{{ provider.Last_Name[0] }}
+                </div>
+                {% endif %}
+                <div>
+                    <h2 class="mb-1">{{ provider.First_Name }} {{ provider.Last_Name }}</h2>
+                    <p class="text-muted mb-1"><i class="fas fa-map-marker-alt"></i> {{ provider.City }}, {{ provider.State }}</p>
+                    {% if provider.bg_check_status == 'passed' %}
+                    <span class="badge bg-success me-2"><i class="fas fa-shield-alt"></i> Background Checked</span>
+                    {% endif %}
+                    <div class="mt-1">
+                        <span class="text-warning">
+                            {% for i in range(5) %}
+                            {% if i < avg_rating|round %}
+                            <i class="fas fa-star"></i>
+                            {% else %}
+                            <i class="far fa-star"></i>
+                            {% endif %}
+                            {% endfor %}
+                        </span>
+                        <small class="text-muted ms-1">{{ "%.1f"|format(avg_rating) }} ({{ reviews|length }} review{{ 's' if reviews|length != 1 }})</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left column: listings + reviews -->
+        <div class="col-lg-8">
+
+            <h4 class="mb-3">Services Offered</h4>
+            {% if listings %}
+            <div class="row g-3 mb-4">
+                {% for l in listings %}
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <span class="badge bg-secondary mb-1">{{ l.Category_Name }}</span>
+                            <h6 class="card-title mb-1">{{ l.Title }}</h6>
+                            {% if l.Description %}
+                            <p class="text-muted small mb-2">{{ l.Description }}</p>
+                            {% endif %}
+                            {% if l.Price_Per_Hour %}
+                            <p class="mb-1 fw-semibold">${{ "%.2f"|format(l.Price_Per_Hour) }}/hr</p>
+                            {% endif %}
+                            {% if l.Price_Per_Job %}
+                            <p class="mb-1 fw-semibold">${{ "%.2f"|format(l.Price_Per_Job) }} flat rate</p>
+                            {% endif %}
+                            {% if l.Service_Radius_Miles %}
+                            <p class="text-muted small mb-0"><i class="fas fa-car"></i> Within {{ l.Service_Radius_Miles }} miles</p>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            {% if session.get('user_id') %}
+                            <a href="{{ url_for('client.service_request') }}?listing_id={{ l.Listing_ID }}" class="btn btn-primary btn-sm w-100">Book Now</a>
+                            {% else %}
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm w-100">Login to Book</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted mb-4">No active listings at this time.</p>
+            {% endif %}
+
+            <h4 class="mb-3">Reviews</h4>
+            {% if reviews %}
+            {% for r in reviews %}
+            <div class="card mb-2 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong>{{ r.reviewer_first }} {{ r.reviewer_last }}</strong>
+                        <small class="text-muted">{{ r.Date_Posted.strftime('%b %d, %Y') }}</small>
+                    </div>
+                    <div class="text-warning my-1">
+                        {% for i in range(5) %}
+                        {% if i < r.Rating %}
+                        <i class="fas fa-star"></i>
+                        {% else %}
+                        <i class="far fa-star"></i>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% if r.Comment %}
+                    <p class="mb-0">{{ r.Comment }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted">No reviews yet.</p>
+            {% endif %}
+
+        </div>
+
+        <!-- Right column: availability -->
+        <div class="col-lg-4">
+            <h4 class="mb-3">Availability</h4>
+            {% if availability %}
+            <div class="card shadow-sm">
+                <ul class="list-group list-group-flush">
+                    {% for slot in availability %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">{{ slot.Day_Of_Week }}</span>
+                        <span class="text-muted small">{{ slot.Start_Time }} – {{ slot.End_Time }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <p class="text-muted">No availability listed.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

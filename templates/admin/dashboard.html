@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Admin - HandyBridge{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h2>Admin Dashboard</h2>
+    <div class="row g-4 mt-2">
+        <div class="col-md-3"><div class="card text-center bg-primary text-white"><div class="card-body"><h3>{{ user_count }}</h3><p>Users</p></div></div></div>
+        <div class="col-md-3"><div class="card text-center bg-success text-white"><div class="card-body"><h3>{{ booking_count }}</h3><p>Bookings</p></div></div></div>
+        <div class="col-md-3"><div class="card text-center bg-warning text-dark"><div class="card-body"><h3>${{ "%.2f"|format(total_revenue) }}</h3><p>Revenue</p></div></div></div>
+        <div class="col-md-3"><div class="card text-center bg-info text-white"><div class="card-body"><h3>{{ category_count }}</h3><p>Categories</p></div></div></div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-6"><a href="{{ url_for('admin.users') }}" class="btn btn-outline-primary w-100 mb-2">Manage Users</a></div>
+        <div class="col-md-6"><a href="{{ url_for('admin.categories') }}" class="btn btn-outline-primary w-100 mb-2">Manage Categories</a></div>
+    </div>
+</div>
+{% endblock %}

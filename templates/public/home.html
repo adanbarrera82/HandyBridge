@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}HandyBridge - Home Services Marketplace{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold">Find Trusted Home Service Providers</h1>
+        <p class="lead mt-3">Plumbing, Cleaning, Electrical, HVAC and more — all background-checked and reviewed.</p>
+        <div class="mt-4">
+            <a href="{{ url_for('search') }}" class="btn btn-light btn-lg me-2">
+                <i class="fas fa-search"></i> Find a Provider
+            </a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-lg">
+                Join as Provider
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">How It Works</h2>
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <div class="display-4 text-primary mb-3"><i class="fas fa-search"></i></div>
+                <h5>1. Search</h5>
+                <p class="text-muted">Browse providers by service type, location, and rating.</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="display-4 text-primary mb-3"><i class="fas fa-calendar-check"></i></div>
+                <h5>2. Book</h5>
+                <p class="text-muted">Schedule an appointment at a time that works for you.</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="display-4 text-primary mb-3"><i class="fas fa-star"></i></div>
+                <h5>3. Review</h5>
+                <p class="text-muted">Pay securely and leave a review for the community.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Service Categories -->
+<section class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">Popular Services</h2>
+        <div class="row g-3">
+            {% set services = [
+                ('Plumbing', 'fa-wrench', 'Leak repair, pipe installation, drain cleaning'),
+                ('Home Cleaning', 'fa-broom', 'Regular cleaning, deep cleaning, move-out'),
+                ('Electrical', 'fa-bolt', 'Wiring, outlets, lighting, panel upgrades'),
+                ('HVAC', 'fa-fan', 'AC repair, heating, duct cleaning'),
+                ('Painting', 'fa-paint-roller', 'Interior, exterior, staining'),
+                ('Landscaping', 'fa-leaf', 'Lawn care, tree trimming, irrigation'),
+                ('Appliance Repair', 'fa-blender', 'Washer, dryer, fridge, oven'),
+                ('Handyman', 'fa-hammer', 'General repairs, assembly, minor fixes')
+            ] %}
+            {% for name, icon, desc in services %}
+            <div class="col-md-3 col-6">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <i class="fas {{ icon }} fa-2x text-primary mb-2"></i>
+                        <h6>{{ name }}</h6>
+                        <small class="text-muted">{{ desc }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

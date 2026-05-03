@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - HandyBridge{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h2>Welcome, {{ session.get('first_name') }}!</h2>
+    <div class="row g-4 mt-2">
+        <div class="col-md-4"><div class="card text-center bg-primary text-white"><div class="card-body"><h3>{{ active_bookings }}</h3><p>Active Bookings</p></div></div></div>
+        <div class="col-md-4"><div class="card text-center"><div class="card-body"><a href="{{ url_for('search') }}" class="btn btn-outline-primary w-100"><i class="fas fa-search"></i> Find Provider</a></div></div></div>
+        <div class="col-md-4"><div class="card text-center"><div class="card-body"><a href="{{ url_for('client.service_request') }}" class="btn btn-outline-success w-100"><i class="fas fa-plus"></i> New Request</a></div></div></div>
+    </div>
+    <h4 class="mt-4">Recent Bookings</h4>
+    {% if recent_bookings %}
+    <table class="table table-hover"><thead><tr><th>Provider</th><th>Service</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    {% for b in recent_bookings %}<tr><td>{{ b.provider_first }} {{ b.provider_last }}</td><td>{{ b.Category_Name or 'N/A' }}</td><td>{{ b.Scheduled_Date }}</td><td><span class="badge bg-{{ 'success' if b.Status=='completed' else 'warning' }}">{{ b.Status }}</span></td><td>{% if b.Status == 'completed' %}<a href="{{ url_for('client.review', booking_id=b.Booking_ID) }}" class="btn btn-sm btn-outline-warning">Review</a>{% endif %}</td></tr>
+    {% endfor %}</tbody></table>
+    {% else %}<p class="text-muted">No bookings yet.</p>{% endif %}
+    <a href="{{ url_for('client.bookings') }}" class="btn btn-outline-secondary">View All</a>
+</div>
+{% endblock %}

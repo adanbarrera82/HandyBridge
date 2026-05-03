@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Search Providers - HandyBridge{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h2>Find a Service Provider</h2>
+    <form method="GET" class="row g-3 mb-4 bg-light p-3 rounded">
+        <div class="col-md-3">
+            <label class="form-label">Service Type</label>
+            <select name="category" class="form-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.Category_ID }}" {{ 'selected' if filters.get('category')==cat.Category_ID|string }}>{{ cat.Category_Name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Zip Code</label>
+            <input type="text" name="zip" class="form-control" value="{{ filters.get('zip','') }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Max $/hr</label>
+            <input type="number" name="max_price" class="form-control" value="{{ filters.get('max_price','') }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Min Rating</label>
+            <select name="min_rating" class="form-select">
+                <option value="">Any</option>
+                {% for r in [4,3,2,1] %}
+                <option value="{{ r }}" {{ 'selected' if filters.get('min_rating')==r|string }}>{{ r }}+ stars</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Search</button>
+        </div>
+    </form>
+
+    {% if providers %}
+    <div class="row g-3">
+        {% for p in providers %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5>{{ p.First_Name }} {{ p.Last_Name }}</h5>
+                    <span class="badge bg-secondary">{{ p.Category_Name }}</span>
+                    <p class="mt-2 mb-1"><strong>{{ p.Title }}</strong></p>
+                    <p class="text-muted small">{{ p.City }}, {{ p.State }}</p>
+                    {% if p.Price_Per_Hour %}<p class="mb-1">${{ "%.2f"|format(p.Price_Per_Hour) }}/hr</p>{% endif %}
+                    <p class="mb-0">
+                        <span class="text-warning">
+                            {% for i in range(5) %}
+                            <i class="fas fa-star{% if i >= p.avg_rating|round %}-half-alt{% endif %}"></i>
+                            {% endfor %}
+                        </span>
+                        <small class="text-muted">({{ p.review_count }} reviews)</small>
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{{ url_for('provider_profile', provider_id=p.Provider_ID) }}?{{ request.query_string.decode() }}" class="btn btn-outline-primary btn-sm w-100">View Profile</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif filters %}
+    <div class="text-center py-5 text-muted">
+        <i class="fas fa-search fa-3x mb-3"></i>
+        <p>No providers found matching your criteria. Try adjusting your filters.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

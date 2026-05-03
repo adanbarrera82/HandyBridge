@@ -1,0 +1,202 @@
+"""
+HandyBridge - Main Application
+An Online Marketplace for Home Services
+CSCI 4333 - Database Design and Implementation
+"""
+
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from functools import wraps
+import os
+
+# Import route blueprints
+from routes.auth import auth_bp
+from routes.client import client_bp
+from routes.provider import provider_bp
+from routes.admin import admin_bp
+from routes.api import api_bp
+
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'handybridge-dev-secret-key-change-in-production')
+
+# Register blueprints
+app.register_blueprint(auth_bp)
+app.register_blueprint(client_bp, url_prefix='/client')
+app.register_blueprint(provider_bp, url_prefix='/provider')
+app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(api_bp, url_prefix='/api')
+
+
+# ============ LOGIN REQUIRED DECORATOR ============
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'warning')
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def role_required(role):
+    """Decorator to require a specific role (provider, client, both, admin)"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                flash('Please log in to access this page.', 'warning')
+                return redirect(url_for('auth.login'))
+            user_role = session.get('account_type', '')
+            if user_role != role and user_role != 'both' and user_role != 'admin':
+                flash('You do not have permission to access this page.', 'danger')
+                return redirect(url_for('home'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+# ============ PUBLIC ROUTES ============
+@app.route('/')
+def home():
+    return render_template('public/home.html')
+
+
+@app.route('/about')
+def about():
+    return render_template('public/about.html')
+
+
+@app.route('/search')
+def search():
+    """Public search page for finding service providers"""
+    from utils.db import get_db_connection
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get all categories for the dropdown
+    cursor.execute("SELECT * FROM ServiceCategory ORDER BY Category_Name")
+    categories = cursor.fetchall()
+
+    # Get search parameters
+    category_id = request.args.get('category')
+    zip_code = request.args.get('zip')
+    max_price = request.args.get('max_price')
+    min_rating = request.args.get('min_rating')
+
+    providers = []
+    if request.args:
+        query = """
+            SELECT sl.*, u.First_Name, u.Last_Name, u.City, u.State,
+                   sc.Category_Name,
+                   COALESCE(AVG(r.Rating), 0) as avg_rating,
+                   COUNT(r.Review_ID) as review_count
+            FROM ServiceListing sl
+            JOIN User u ON sl.Provider_ID = u.User_ID
+            JOIN ServiceCategory sc ON sl.Category_ID = sc.Category_ID
+            LEFT JOIN Booking b ON b.Provider_ID = sl.Provider_ID
+            LEFT JOIN Review r ON r.Booking_ID = b.Booking_ID AND r.Reviewee_ID = sl.Provider_ID
+            WHERE sl.Is_Active = TRUE
+        """
+        params = []
+
+        if category_id:
+            query += " AND sl.Category_ID = %s"
+            params.append(category_id)
+
+        if max_price:
+            query += " AND sl.Price_Per_Hour <= %s"
+            params.append(max_price)
+
+        query += " GROUP BY sl.Listing_ID"
+
+        if min_rating:
+            query += " HAVING avg_rating >= %s"
+            params.append(min_rating)
+
+        query += " ORDER BY avg_rating DESC"
+
+        cursor.execute(query, params)
+        providers = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('public/search.html',
+                         categories=categories,
+                         providers=providers,
+                         filters=request.args)
+
+
+@app.route('/profile/<int:provider_id>')
+def provider_profile(provider_id):
+    """Public profile page for a service provider"""
+    from utils.db import get_db_connection
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT u.User_ID, u.First_Name, u.Last_Name, u.City, u.State, u.Zip_Code,
+               u.Profile_Image_URL,
+               MAX(CASE WHEN bc.Check_Status = 'passed' THEN 'passed' END) as bg_check_status
+        FROM User u
+        LEFT JOIN BackgroundCheck bc ON bc.User_ID = u.User_ID
+        WHERE u.User_ID = %s AND u.Account_Type IN ('provider', 'both')
+        GROUP BY u.User_ID
+    """, (provider_id,))
+    provider = cursor.fetchone()
+
+    if not provider:
+        cursor.close()
+        conn.close()
+        return render_template('public/404.html'), 404
+
+    cursor.execute("""
+        SELECT sl.*, sc.Category_Name
+        FROM ServiceListing sl
+        JOIN ServiceCategory sc ON sl.Category_ID = sc.Category_ID
+        WHERE sl.Provider_ID = %s AND sl.Is_Active = TRUE
+        ORDER BY sl.Date_Created DESC
+    """, (provider_id,))
+    listings = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT * FROM Availability WHERE Provider_ID = %s
+        ORDER BY FIELD(Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), Start_Time
+    """, (provider_id,))
+    availability = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT r.Rating, r.Comment, r.Date_Posted,
+               u.First_Name as reviewer_first, u.Last_Name as reviewer_last
+        FROM Review r
+        JOIN User u ON r.Reviewer_ID = u.User_ID
+        WHERE r.Reviewee_ID = %s
+        ORDER BY r.Date_Posted DESC
+    """, (provider_id,))
+    reviews = cursor.fetchall()
+
+    avg_rating = sum(r['Rating'] for r in reviews) / len(reviews) if reviews else 0
+
+    cursor.close()
+    conn.close()
+
+    return render_template('public/provider_profile.html',
+                           provider=provider,
+                           listings=listings,
+                           availability=availability,
+                           reviews=reviews,
+                           avg_rating=avg_rating)
+
+
+# ============ ERROR HANDLERS ============
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('public/404.html'), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('public/500.html'), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
