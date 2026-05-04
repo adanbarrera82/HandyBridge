@@ -4,15 +4,14 @@ Provider routes: Dashboard, Listings, Availability, Bookings, Earnings
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from utils.db import get_db_connection
+from utils.decorators import provider_required
 
 provider_bp = Blueprint('provider', __name__)
 
 
 @provider_bp.route('/dashboard')
+@provider_required
 def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     user_id = session['user_id']
@@ -48,17 +47,15 @@ def dashboard():
     conn.close()
 
     return render_template('provider/dashboard.html',
-                         active_bookings=active_bookings,
-                         active_listings=active_listings,
-                         total_earnings=total_earnings,
-                         recent_bookings=recent_bookings)
+                           active_bookings=active_bookings,
+                           active_listings=active_listings,
+                           total_earnings=total_earnings,
+                           recent_bookings=recent_bookings)
 
 
 @provider_bp.route('/listings')
+@provider_required
 def listings():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -76,10 +73,8 @@ def listings():
 
 
 @provider_bp.route('/listings/new', methods=['GET', 'POST'])
+@provider_required
 def new_listing():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -112,10 +107,8 @@ def new_listing():
 
 
 @provider_bp.route('/listings/<int:listing_id>/edit', methods=['GET', 'POST'])
+@provider_required
 def edit_listing(listing_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -154,10 +147,8 @@ def edit_listing(listing_id):
 
 
 @provider_bp.route('/listings/<int:listing_id>/delete', methods=['POST'])
+@provider_required
 def delete_listing(listing_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -173,10 +164,8 @@ def delete_listing(listing_id):
 
 
 @provider_bp.route('/availability', methods=['GET', 'POST'])
+@provider_required
 def availability():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -201,10 +190,8 @@ def availability():
 
 
 @provider_bp.route('/availability/<int:slot_id>/delete', methods=['POST'])
+@provider_required
 def delete_availability(slot_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM Availability WHERE Availability_ID = %s AND Provider_ID = %s",
@@ -218,10 +205,8 @@ def delete_availability(slot_id):
 
 
 @provider_bp.route('/bookings')
+@provider_required
 def bookings():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -239,10 +224,8 @@ def bookings():
 
 
 @provider_bp.route('/bookings/<int:booking_id>/update', methods=['POST'])
+@provider_required
 def update_booking(booking_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     new_status = request.form['status']
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -272,10 +255,8 @@ def update_booking(booking_id):
 
 
 @provider_bp.route('/earnings')
+@provider_required
 def earnings():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""

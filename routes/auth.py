@@ -5,8 +5,11 @@ Authentication routes: Register, Login, Logout, Password Reset
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from utils.db import get_db_connection
 from utils.auth import hash_password, verify_password
+from utils.extensions import limiter
 
 auth_bp = Blueprint('auth', __name__)
+
+_ALLOWED_ACCOUNT_TYPES = {'client', 'provider', 'both'}
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -24,7 +27,6 @@ def register():
         zip_code = request.form.get('zip_code', '').strip()
         account_type = request.form.get('account_type', 'client')
 
-        # Validation
         errors = []
         if not first_name or not last_name:
             errors.append('First and last name are required.')
@@ -34,13 +36,15 @@ def register():
             errors.append('Password must be at least 8 characters.')
         if password != confirm_password:
             errors.append('Passwords do not match.')
+        # Prevent self-promotion to admin via the registration form
+        if account_type not in _ALLOWED_ACCOUNT_TYPES:
+            errors.append('Invalid account type.')
 
         if errors:
             for error in errors:
                 flash(error, 'danger')
             return render_template('public/register.html', form=request.form)
 
-        # Check if email already exists
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT User_ID FROM User WHERE Email = %s", (email,))
@@ -52,7 +56,6 @@ def register():
             conn.close()
             return render_template('public/register.html', form=request.form)
 
-        # Create user
         hashed = hash_password(password)
         cursor.execute("""
             INSERT INTO User (First_Name, Last_Name, Email, Password_Hash, Phone,
@@ -71,6 +74,7 @@ def register():
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -84,6 +88,9 @@ def login():
         conn.close()
 
         if user and verify_password(password, user['Password_Hash']):
+            # Clear existing session data to prevent session fixation
+            session.clear()
+            session.permanent = True
             session['user_id'] = user['User_ID']
             session['first_name'] = user['First_Name']
             session['last_name'] = user['Last_Name']
@@ -92,7 +99,6 @@ def login():
 
             flash(f"Welcome back, {user['First_Name']}!", 'success')
 
-            # Redirect based on role
             if user['Account_Type'] == 'provider':
                 return redirect(url_for('provider.dashboard'))
             elif user['Account_Type'] == 'admin':
@@ -105,7 +111,7 @@ def login():
     return render_template('public/login.html')
 
 
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     flash('You have been logged out.', 'info')

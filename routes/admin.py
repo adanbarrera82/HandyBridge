@@ -2,17 +2,16 @@
 Admin routes: Dashboard, User Management, Category Management, Reports
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from utils.db import get_db_connection
+from utils.decorators import admin_required
 
 admin_bp = Blueprint('admin', __name__)
 
 
 @admin_bp.route('/dashboard')
+@admin_required
 def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -32,17 +31,15 @@ def dashboard():
     conn.close()
 
     return render_template('admin/dashboard.html',
-                         user_count=user_count,
-                         booking_count=booking_count,
-                         total_revenue=total_revenue,
-                         category_count=category_count)
+                           user_count=user_count,
+                           booking_count=booking_count,
+                           total_revenue=total_revenue,
+                           category_count=category_count)
 
 
 @admin_bp.route('/users')
+@admin_required
 def users():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM User ORDER BY Date_Registered DESC")
@@ -54,10 +51,8 @@ def users():
 
 
 @admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
+@admin_required
 def delete_user(user_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM User WHERE User_ID = %s", (user_id,))
@@ -70,10 +65,8 @@ def delete_user(user_id):
 
 
 @admin_bp.route('/categories', methods=['GET', 'POST'])
+@admin_required
 def categories():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -94,10 +87,8 @@ def categories():
 
 
 @admin_bp.route('/categories/<int:cat_id>/delete', methods=['POST'])
+@admin_required
 def delete_category(cat_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM ServiceCategory WHERE Category_ID = %s", (cat_id,))

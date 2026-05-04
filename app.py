@@ -4,54 +4,65 @@ An Online Marketplace for Home Services
 CSCI 4333 - Database Design and Implementation
 """
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from functools import wraps
 import os
+import logging
+from datetime import timedelta
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_talisman import Talisman
 
-# Import route blueprints
 from routes.auth import auth_bp
 from routes.client import client_bp
 from routes.provider import provider_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
+from utils.extensions import csrf, limiter
+
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'handybridge-dev-secret-key-change-in-production')
 
-# Register blueprints
+# ============ SECRET KEY — crash fast if missing ============
+_secret = os.environ.get('SECRET_KEY')
+if not _secret:
+    raise RuntimeError("SECRET_KEY environment variable is not set. "
+                       "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\"")
+app.secret_key = _secret
+
+# ============ SESSION COOKIE SECURITY ============
+_is_production = os.environ.get('FLASK_ENV') == 'production'
+app.config.update(
+    SESSION_COOKIE_SECURE=_is_production,   # HTTPS-only in production
+    SESSION_COOKIE_HTTPONLY=True,            # no JS access to cookie
+    SESSION_COOKIE_SAMESITE='Lax',           # blocks cross-site cookie sending
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
+)
+
+# ============ EXTENSIONS ============
+csrf.init_app(app)
+limiter.init_app(app)
+
+# ============ SECURITY HEADERS ============
+_csp = {
+    'default-src': "'self'",
+    'script-src': ["'self'", 'cdn.jsdelivr.net'],
+    'style-src': ["'self'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'],
+    'font-src': ["'self'", 'cdnjs.cloudflare.com', 'data:'],
+    'img-src': ["'self'", 'data:', 'https:'],
+}
+Talisman(
+    app,
+    force_https=_is_production,   # set FLASK_ENV=production to enable
+    content_security_policy=_csp,
+    content_security_policy_nonce_in=['script-src'],
+)
+
+# ============ BLUEPRINTS ============
 app.register_blueprint(auth_bp)
 app.register_blueprint(client_bp, url_prefix='/client')
 app.register_blueprint(provider_bp, url_prefix='/provider')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(api_bp, url_prefix='/api')
-
-
-# ============ LOGIN REQUIRED DECORATOR ============
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please log in to access this page.', 'warning')
-            return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def role_required(role):
-    """Decorator to require a specific role (provider, client, both, admin)"""
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
-                flash('Please log in to access this page.', 'warning')
-                return redirect(url_for('auth.login'))
-            user_role = session.get('account_type', '')
-            if user_role != role and user_role != 'both' and user_role != 'admin':
-                flash('You do not have permission to access this page.', 'danger')
-                return redirect(url_for('home'))
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
 
 
 # ============ PUBLIC ROUTES ============
@@ -67,18 +78,14 @@ def about():
 
 @app.route('/search')
 def search():
-    """Public search page for finding service providers"""
     from utils.db import get_db_connection
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Get all categories for the dropdown
     cursor.execute("SELECT * FROM ServiceCategory ORDER BY Category_Name")
     categories = cursor.fetchall()
 
-    # Get search parameters
     category_id = request.args.get('category')
-    zip_code = request.args.get('zip')
     max_price = request.args.get('max_price')
     min_rating = request.args.get('min_rating')
 
@@ -121,14 +128,13 @@ def search():
     conn.close()
 
     return render_template('public/search.html',
-                         categories=categories,
-                         providers=providers,
-                         filters=request.args)
+                           categories=categories,
+                           providers=providers,
+                           filters=request.args)
 
 
 @app.route('/profile/<int:provider_id>')
 def provider_profile(provider_id):
-    """Public profile page for a service provider"""
     from utils.db import get_db_connection
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -195,8 +201,13 @@ def not_found(e):
 
 @app.errorhandler(500)
 def server_error(e):
+    logger.error("Internal server error: %s", e)
     return render_template('public/500.html'), 500
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(
+        debug=os.environ.get('FLASK_DEBUG') == '1',
+        host='0.0.0.0',
+        port=5000,
+    )

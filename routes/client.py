@@ -4,28 +4,24 @@ Client routes: Dashboard, Service Requests, Bookings, Reviews, Payments
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from utils.db import get_db_connection
+from utils.decorators import login_required
 
 client_bp = Blueprint('client', __name__)
 
 
 @client_bp.route('/dashboard')
+@login_required
 def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-
     user_id = session['user_id']
 
-    # Get active bookings count
     cursor.execute("""
         SELECT COUNT(*) as count FROM Booking
         WHERE Client_ID = %s AND Status IN ('pending', 'confirmed', 'in_progress')
     """, (user_id,))
     active_bookings = cursor.fetchone()['count']
 
-    # Get recent bookings
     cursor.execute("""
         SELECT b.*, u.First_Name as provider_first, u.Last_Name as provider_last,
                sc.Category_Name
@@ -38,7 +34,6 @@ def dashboard():
     """, (user_id,))
     recent_bookings = cursor.fetchall()
 
-    # Get unread notifications
     cursor.execute("""
         SELECT * FROM Notification
         WHERE User_ID = %s AND Is_Read = FALSE
@@ -50,16 +45,14 @@ def dashboard():
     conn.close()
 
     return render_template('client/dashboard.html',
-                         active_bookings=active_bookings,
-                         recent_bookings=recent_bookings,
-                         notifications=notifications)
+                           active_bookings=active_bookings,
+                           recent_bookings=recent_bookings,
+                           notifications=notifications)
 
 
 @client_bp.route('/request', methods=['GET', 'POST'])
+@login_required
 def service_request():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -88,7 +81,6 @@ def service_request():
         conn.close()
         return redirect(url_for('client.dashboard'))
 
-    # GET - show form
     cursor.execute("SELECT * FROM ServiceCategory ORDER BY Category_Name")
     categories = cursor.fetchall()
     cursor.close()
@@ -98,10 +90,8 @@ def service_request():
 
 
 @client_bp.route('/bookings')
+@login_required
 def bookings():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -122,14 +112,24 @@ def bookings():
 
 
 @client_bp.route('/booking/<int:booking_id>/review', methods=['GET', 'POST'])
+@login_required
 def review(booking_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
+        # Validate rating server-side — DB CHECK constraint alone is not enough
+        try:
+            rating = int(request.form['rating'])
+            if not (1 <= rating <= 5):
+                raise ValueError
+        except (ValueError, KeyError):
+            flash('Rating must be a whole number between 1 and 5.', 'danger')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('client.bookings'))
+
+        # Verify this booking belongs to the logged-in client
         cursor.execute("""
             SELECT Provider_ID FROM Booking WHERE Booking_ID = %s AND Client_ID = %s
         """, (booking_id, session['user_id']))
@@ -140,7 +140,7 @@ def review(booking_id):
                 INSERT INTO Review (Booking_ID, Reviewer_ID, Reviewee_ID, Rating, Comment)
                 VALUES (%s, %s, %s, %s, %s)
             """, (booking_id, session['user_id'], booking['Provider_ID'],
-                  request.form['rating'], request.form.get('comment', '')))
+                  rating, request.form.get('comment', '')))
             conn.commit()
             flash('Review submitted!', 'success')
 
@@ -148,7 +148,6 @@ def review(booking_id):
         conn.close()
         return redirect(url_for('client.bookings'))
 
-    # GET
     cursor.execute("""
         SELECT b.*, u.First_Name, u.Last_Name
         FROM Booking b JOIN User u ON b.Provider_ID = u.User_ID
@@ -162,25 +161,35 @@ def review(booking_id):
 
 
 @client_bp.route('/booking/<int:booking_id>/pay', methods=['GET', 'POST'])
+@login_required
 def payment(booking_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
+        # Fetch the authoritative amount from the DB — never trust the form value
+        cursor.execute("""
+            SELECT Total_Amount FROM Booking
+            WHERE Booking_ID = %s AND Client_ID = %s
+        """, (booking_id, session['user_id']))
+        booking = cursor.fetchone()
+
+        if not booking:
+            flash('Booking not found.', 'danger')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('client.bookings'))
+
         cursor.execute("""
             INSERT INTO Payment (Booking_ID, Amount, Payment_Method, Payment_Status)
             VALUES (%s, %s, %s, 'completed')
-        """, (booking_id, request.form['amount'], request.form['payment_method']))
+        """, (booking_id, booking['Total_Amount'], request.form['payment_method']))
         conn.commit()
         flash('Payment processed successfully!', 'success')
         cursor.close()
         conn.close()
         return redirect(url_for('client.bookings'))
 
-    # GET
     cursor.execute("""
         SELECT b.*, u.First_Name, u.Last_Name
         FROM Booking b JOIN User u ON b.Provider_ID = u.User_ID
@@ -194,10 +203,8 @@ def payment(booking_id):
 
 
 @client_bp.route('/settings', methods=['GET', 'POST'])
+@login_required
 def settings():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 

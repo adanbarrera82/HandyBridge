@@ -23,6 +23,7 @@ A web application that connects home service providers (plumbers, cleaners, elec
 | **Backend** | Python 3.12, Flask 3.0 |
 | **Database** | MySQL 8.0 |
 | **Auth** | Session-based with bcrypt password hashing |
+| **Security** | Flask-WTF (CSRF protection), Flask-Limiter (rate limiting), Flask-Talisman (security headers) |
 | **Templating** | Jinja2 |
 | **Version Control** | Git + GitHub |
  
@@ -195,9 +196,10 @@ pip install -r requirements.txt
 mysql -u root -p < database/setup.sql
  
 # 5. Set up environment variables
-# Create a .env file in the project root:
-# DB_PASSWORD=your_mysql_root_password
-# SECRET_KEY=any-random-secret-string
+# Create a .env file in the HandyBridge/ directory:
+# SECRET_KEY=<run: python -c "import secrets; print(secrets.token_hex(32))">
+# DB_PASSWORD=your_mysql_password
+# (SECRET_KEY is required — the app will not start without it)
  
 # 6. Run the Flask app
 python app.py
@@ -251,7 +253,7 @@ HandyBridge/
 │   └── api.py                    # JSON API endpoints
 ├── templates/
 │   ├── base.html                 # Shared layout (navbar, footer)
-│   ├── public/                   # Home, Login, Register, Search, About
+│   ├── public/                   # Home, Login, Register, Search, About, Provider Profile
 │   ├── client/                   # Client pages
 │   ├── provider/                 # Provider pages
 │   └── admin/                    # Admin pages
@@ -261,7 +263,9 @@ HandyBridge/
 │   └── images/                   # Static images
 └── utils/
     ├── db.py                     # MySQL connection helper
-    └── auth.py                   # Password hashing utilities
+    ├── auth.py                   # Password hashing utilities
+    ├── decorators.py             # login_required, admin_required, provider_required
+    └── extensions.py             # Flask-Limiter and Flask-WTF shared instances
 ```
  
 ## References
