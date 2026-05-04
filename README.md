@@ -275,5 +275,4 @@ HandyBridge/
 - [Bootstrap 5 Documentation](https://getbootstrap.com/docs/5.3/)
 - [bcrypt Documentation](https://pypi.org/project/bcrypt/)
 - ANTES System Requirements Specification (UTRGV course reference)
-- ANTES System Software Design (UTRGV course reference)#   H a n d y B r i d g e  
- 
+- ANTES System Software Design (UTRGV course reference)
