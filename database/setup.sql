@@ -7,6 +7,7 @@ CREATE DATABASE IF NOT EXISTS HandyBridge;
 USE HandyBridge;
 
 -- Drop tables in reverse dependency order if they exist
+DROP TABLE IF EXISTS PasswordReset;
 DROP TABLE IF EXISTS Notification;
 DROP TABLE IF EXISTS Review;
 DROP TABLE IF EXISTS Payment;
@@ -147,7 +148,18 @@ CREATE TABLE Review (
     FOREIGN KEY (Reviewee_ID) REFERENCES User(User_ID) ON DELETE CASCADE
 );
 
--- 10. Notification
+-- 10. PasswordReset
+CREATE TABLE PasswordReset (
+    Reset_ID INT AUTO_INCREMENT PRIMARY KEY,
+    User_ID INT NOT NULL,
+    Token VARCHAR(64) NOT NULL UNIQUE,
+    Expires_At DATETIME NOT NULL,
+    Is_Used BOOLEAN NOT NULL DEFAULT FALSE,
+    Created_At DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (User_ID) REFERENCES User(User_ID) ON DELETE CASCADE
+);
+
+-- 11. Notification
 CREATE TABLE Notification (
     Notification_ID INT AUTO_INCREMENT PRIMARY KEY,
     User_ID INT NOT NULL,

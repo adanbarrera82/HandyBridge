@@ -15,7 +15,8 @@ from routes.client import client_bp
 from routes.provider import provider_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
-from utils.extensions import csrf, limiter
+from routes.account import account_bp
+from utils.extensions import csrf, limiter, mail
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -38,9 +39,20 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
 )
 
+# ============ FLASK-MAIL ============
+app.config.update(
+    MAIL_SERVER=os.environ.get('MAIL_SERVER', 'smtp.gmail.com'),
+    MAIL_PORT=int(os.environ.get('MAIL_PORT', 587)),
+    MAIL_USE_TLS=True,
+    MAIL_USERNAME=os.environ.get('MAIL_USERNAME'),
+    MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD'),
+    MAIL_DEFAULT_SENDER=os.environ.get('MAIL_DEFAULT_SENDER') or os.environ.get('MAIL_USERNAME'),
+)
+
 # ============ EXTENSIONS ============
 csrf.init_app(app)
 limiter.init_app(app)
+mail.init_app(app)
 
 # ============ SECURITY HEADERS ============
 _csp = {
@@ -59,6 +71,7 @@ Talisman(
 
 # ============ BLUEPRINTS ============
 app.register_blueprint(auth_bp)
+app.register_blueprint(account_bp)
 app.register_blueprint(client_bp, url_prefix='/client')
 app.register_blueprint(provider_bp, url_prefix='/provider')
 app.register_blueprint(admin_bp, url_prefix='/admin')
