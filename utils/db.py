@@ -1,21 +1,19 @@
 """
 Database connection utility for HandyBridge
 """
-
 import mysql.connector
 from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-
-# Database configuration - update these for your environment
+# Railway provides these environment variables
 DB_CONFIG = {
-    'host': os.environ.get('DB_HOST', '127.0.0.1'),
-    'port': int(os.environ.get('DB_PORT', 3306)),
-    'user': os.environ.get('DB_USER', 'root'),
-    'password': os.environ.get('DB_PASSWORD', ''),
-    'database': os.environ.get('DB_NAME', 'HandyBridge'),
+    'host': os.environ.get('MYSQLHOST', os.environ.get('DB_HOST', 'mysql.railway.internal')),
+    'port': int(os.environ.get('MYSQLPORT', os.environ.get('DB_PORT', 3306))),
+    'user': os.environ.get('MYSQLUSER', os.environ.get('DB_USER', 'root')),
+    'password': os.environ.get('MYSQLPASSWORD', os.environ.get('DB_PASSWORD', 'QmKrpswutLvwpvExcyTtzNMkBGdOCgwD')),
+    'database': os.environ.get('MYSQLDATABASE', os.environ.get('DB_NAME', 'HandyBridge')),
 }
 
 
