@@ -2,6 +2,14 @@
 {% block title %}Dashboard - HandyBridge{% endblock %}
 {% block content %}
 <div class="container py-4">
+
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link active" href="{{ url_for('client.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('client.bookings') }}"><i class="fas fa-calendar-check"></i> My Bookings</a>
+        <a class="nav-link" href="{{ url_for('client.service_request') }}"><i class="fas fa-clipboard-list"></i> Requests</a>
+        <a class="nav-link" href="{{ url_for('client.settings') }}"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+
     <h2>Welcome, {{ session.get('first_name') }}!</h2>
     <div class="row g-4 mt-2">
         <div class="col-md-4"><div class="card text-center bg-primary text-white"><div class="card-body"><h3>{{ active_bookings }}</h3><p>Active Bookings</p></div></div></div>

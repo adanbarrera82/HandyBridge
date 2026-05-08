@@ -2,6 +2,13 @@
 {% block title %}Admin - HandyBridge{% endblock %}
 {% block content %}
 <div class="container py-4">
+
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link active" href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a>
+        <a class="nav-link" href="{{ url_for('admin.categories') }}"><i class="fas fa-tags"></i> Categories</a>
+    </nav>
+
     <h2>Admin Dashboard</h2>
     <div class="row g-4 mt-2">
         <div class="col-md-3"><div class="card text-center bg-primary text-white"><div class="card-body"><h3>{{ user_count }}</h3><p>Users</p></div></div></div>

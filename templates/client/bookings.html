@@ -1,5 +1,130 @@
 {% extends "base.html" %}
-{% block title %}bookings - HandyBridge{% endblock %}
+{% block title %}My Bookings - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>bookings</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('client.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link active" href="{{ url_for('client.bookings') }}"><i class="fas fa-calendar-check"></i> My Bookings</a>
+        <a class="nav-link" href="{{ url_for('client.service_request') }}"><i class="fas fa-clipboard-list"></i> Requests</a>
+        <a class="nav-link" href="{{ url_for('client.settings') }}"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-calendar-check text-primary"></i> My Bookings</h2>
+        <a href="{{ url_for('search') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Book a Service
+        </a>
+    </div>
+
+    {% if bookings %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Provider</th>
+                    <th>Service</th>
+                    <th>Date &amp; Time</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for b in bookings %}
+            {% set status_color = {
+                'pending':    'warning',
+                'confirmed':  'info',
+                'in_progress':'primary',
+                'completed':  'success',
+                'cancelled':  'secondary'
+            }.get(b.Status, 'secondary') %}
+            <tr>
+                <td class="text-muted small">{{ b.Booking_ID }}</td>
+                <td>
+                    <a href="{{ url_for('provider_profile', provider_id=b.Provider_ID) }}" class="text-decoration-none fw-semibold">
+                        {{ b.provider_first }} {{ b.provider_last }}
+                    </a>
+                </td>
+                <td>{{ b.Category_Name or '—' }}</td>
+                <td>
+                    <div>{{ b.Scheduled_Date }}</div>
+                    <small class="text-muted">{{ b.Scheduled_Start_Time }} – {{ b.Scheduled_End_Time }}</small>
+                </td>
+                <td>
+                    {% if b.Total_Amount %}
+                        <strong>${{ "%.2f"|format(b.Total_Amount) }}</strong>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-{{ status_color }}">
+                        {{ b.Status | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td class="text-nowrap">
+                    {% if b.Status in ('pending', 'confirmed') %}
+                    <form method="POST" action="{{ url_for('client.update_booking', booking_id=b.Booking_ID) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="cancelled">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Cancel this booking?')">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </form>
+
+                    {% elif b.Status == 'in_progress' %}
+                    <form method="POST" action="{{ url_for('client.update_booking', booking_id=b.Booking_ID) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="completed">
+                        <button type="submit" class="btn btn-sm btn-success"
+                                onclick="return confirm('Mark this booking as completed?')">
+                            <i class="fas fa-check"></i> Mark Completed
+                        </button>
+                    </form>
+
+                    {% elif b.Status == 'completed' and not b.review_id %}
+                    <a href="{{ url_for('client.review', booking_id=b.Booking_ID) }}"
+                       class="btn btn-sm btn-outline-warning">
+                        <i class="fas fa-star"></i> Write Review
+                    </a>
+
+                    {% elif b.Status == 'completed' and b.review_id %}
+                    <span class="text-success small"><i class="fas fa-check-circle"></i> Reviewed</span>
+
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Status legend -->
+    <div class="d-flex flex-wrap gap-2 mt-2">
+        <small class="text-muted">Status:</small>
+        <span class="badge bg-warning text-dark">Pending</span>
+        <span class="badge bg-info">Confirmed</span>
+        <span class="badge bg-primary">In Progress</span>
+        <span class="badge bg-success">Completed</span>
+        <span class="badge bg-secondary">Cancelled</span>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+        <h5 class="text-muted">No bookings yet</h5>
+        <p class="text-muted">Browse service providers and book your first service.</p>
+        <a href="{{ url_for('search') }}" class="btn btn-primary mt-2">
+            <i class="fas fa-search"></i> Find a Provider
+        </a>
+    </div>
+    {% endif %}
+
+</div>
 {% endblock %}

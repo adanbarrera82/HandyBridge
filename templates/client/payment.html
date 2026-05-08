@@ -1,5 +1,38 @@
 {% extends "base.html" %}
-{% block title %}payment - HandyBridge{% endblock %}
+{% block title %}Payment - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>payment</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4" style="max-width: 640px;">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('client.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('client.bookings') }}"><i class="fas fa-calendar-check"></i> My Bookings</a>
+        <a class="nav-link" href="{{ url_for('client.service_request') }}"><i class="fas fa-clipboard-list"></i> Requests</a>
+        <a class="nav-link" href="{{ url_for('client.settings') }}"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+
+    <h2 class="mb-4"><i class="fas fa-credit-card text-primary"></i> Payment</h2>
+
+    <div class="card border-warning shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-tools"></i> Coming Soon</h5>
+        </div>
+        <div class="card-body">
+            <p class="lead mb-2">Payment processing integration is planned for future development.</p>
+            <p class="text-muted mb-4">
+                This feature will include Stripe/PayPal integration for secure, real-time transactions —
+                allowing clients to pay providers directly through the platform.
+            </p>
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle"></i>
+                <strong>TODO:</strong> Integrate Stripe or PayPal SDK, handle webhooks for payment confirmation,
+                update <code>Booking.Status</code> and <code>Payment</code> table on success.
+            </div>
+            <a href="{{ url_for('client.bookings') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Bookings
+            </a>
+        </div>
+    </div>
+
+</div>
 {% endblock %}

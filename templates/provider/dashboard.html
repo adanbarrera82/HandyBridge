@@ -2,6 +2,15 @@
 {% block title %}Provider Dashboard - HandyBridge{% endblock %}
 {% block content %}
 <div class="container py-4">
+
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link active" href="{{ url_for('provider.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('provider.listings') }}"><i class="fas fa-list"></i> Listings</a>
+        <a class="nav-link" href="{{ url_for('provider.availability') }}"><i class="fas fa-clock"></i> Availability</a>
+        <a class="nav-link" href="{{ url_for('provider.bookings') }}"><i class="fas fa-calendar"></i> Bookings</a>
+        <a class="nav-link" href="{{ url_for('provider.earnings') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+    </nav>
+
     <h2>Provider Dashboard</h2>
     <div class="row g-4 mt-2">
         <div class="col-md-3"><div class="card text-center bg-primary text-white"><div class="card-body"><h3>{{ active_bookings }}</h3><p>Active Jobs</p></div></div></div>

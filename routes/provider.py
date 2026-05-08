@@ -65,11 +65,15 @@ def listings():
         WHERE sl.Provider_ID = %s
         ORDER BY sl.Date_Created DESC
     """, (session['user_id'],))
-    listings = cursor.fetchall()
+    listings_list = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template('provider/listings.html', listings=listings)
+    total = len(listings_list)
+    active = sum(1 for l in listings_list if l['Is_Active'])
+    stats = {'total': total, 'active': active, 'inactive': total - active}
+
+    return render_template('provider/listings.html', listings=listings_list, stats=stats)
 
 
 @provider_bp.route('/listings/new', methods=['GET', 'POST'])
@@ -87,13 +91,13 @@ def new_listing():
             session['user_id'],
             request.form['category_id'],
             request.form['title'],
-            request.form['description'],
+            request.form.get('description', ''),
             request.form.get('price_per_hour') or None,
             request.form.get('price_per_job') or None,
             request.form.get('service_radius') or None,
         ))
         conn.commit()
-        flash('Listing created!', 'success')
+        flash('Listing created successfully!', 'success')
         cursor.close()
         conn.close()
         return redirect(url_for('provider.listings'))
@@ -114,11 +118,13 @@ def edit_listing(listing_id):
 
     if request.method == 'POST':
         cursor.execute("""
-            UPDATE ServiceListing SET Title=%s, Description=%s, Price_Per_Hour=%s,
-                Price_Per_Job=%s, Service_Radius_Miles=%s, Is_Active=%s
+            UPDATE ServiceListing SET Category_ID=%s, Title=%s, Description=%s,
+                Price_Per_Hour=%s, Price_Per_Job=%s, Service_Radius_Miles=%s, Is_Active=%s
             WHERE Listing_ID = %s AND Provider_ID = %s
         """, (
-            request.form['title'], request.form['description'],
+            request.form['category_id'],
+            request.form['title'],
+            request.form.get('description', ''),
             request.form.get('price_per_hour') or None,
             request.form.get('price_per_job') or None,
             request.form.get('service_radius') or None,
@@ -126,7 +132,7 @@ def edit_listing(listing_id):
             listing_id, session['user_id']
         ))
         conn.commit()
-        flash('Listing updated!', 'success')
+        flash('Listing updated successfully!', 'success')
         cursor.close()
         conn.close()
         return redirect(url_for('provider.listings'))
@@ -138,12 +144,41 @@ def edit_listing(listing_id):
     """, (listing_id, session['user_id']))
     listing = cursor.fetchone()
 
+    if not listing:
+        flash('Listing not found.', 'danger')
+        cursor.close()
+        conn.close()
+        return redirect(url_for('provider.listings'))
+
     cursor.execute("SELECT * FROM ServiceCategory ORDER BY Category_Name")
     categories = cursor.fetchall()
     cursor.close()
     conn.close()
 
     return render_template('provider/edit_listing.html', listing=listing, categories=categories)
+
+
+@provider_bp.route('/listings/<int:listing_id>/toggle', methods=['POST'])
+@provider_required
+def toggle_listing(listing_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT Is_Active FROM ServiceListing WHERE Listing_ID = %s AND Provider_ID = %s",
+        (listing_id, session['user_id'])
+    )
+    listing = cursor.fetchone()
+    if listing:
+        new_state = not listing['Is_Active']
+        cursor.execute(
+            "UPDATE ServiceListing SET Is_Active = %s WHERE Listing_ID = %s AND Provider_ID = %s",
+            (new_state, listing_id, session['user_id'])
+        )
+        conn.commit()
+        flash('Listing {}.'.format('activated' if new_state else 'deactivated'), 'success')
+    cursor.close()
+    conn.close()
+    return redirect(url_for('provider.listings'))
 
 
 @provider_bp.route('/listings/<int:listing_id>/delete', methods=['POST'])
@@ -170,23 +205,35 @@ def availability():
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
-        cursor.execute("""
-            INSERT INTO Availability (Provider_ID, Day_Of_Week, Start_Time, End_Time)
-            VALUES (%s, %s, %s, %s)
-        """, (session['user_id'], request.form['day_of_week'],
-              request.form['start_time'], request.form['end_time']))
-        conn.commit()
-        flash('Availability slot added!', 'success')
+        start = request.form['start_time']
+        end = request.form['end_time']
+        if start >= end:
+            flash('End time must be after start time.', 'danger')
+        else:
+            cursor.execute("""
+                INSERT INTO Availability (Provider_ID, Day_Of_Week, Start_Time, End_Time)
+                VALUES (%s, %s, %s, %s)
+            """, (session['user_id'], request.form['day_of_week'], start, end))
+            conn.commit()
+            flash('Availability slot added!', 'success')
 
     cursor.execute("""
         SELECT * FROM Availability WHERE Provider_ID = %s
-        ORDER BY FIELD(Day_Of_Week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), Start_Time
+        ORDER BY FIELD(Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), Start_Time
     """, (session['user_id'],))
     slots = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template('provider/availability.html', slots=slots)
+    days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    grouped = {day: [] for day in days_order}
+    for slot in slots:
+        grouped[slot['Day_Of_Week']].append(slot)
+
+    return render_template('provider/availability.html',
+                           slots=slots,
+                           grouped=grouped,
+                           days_order=days_order)
 
 
 @provider_bp.route('/availability/<int:slot_id>/delete', methods=['POST'])
@@ -211,16 +258,26 @@ def bookings():
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT b.*, u.First_Name as client_first, u.Last_Name as client_last,
-               u.Phone as client_phone
-        FROM Booking b JOIN User u ON b.Client_ID = u.User_ID
+               u.Phone as client_phone, sc.Category_Name
+        FROM Booking b
+        JOIN User u ON b.Client_ID = u.User_ID
+        LEFT JOIN ServiceListing sl ON b.Listing_ID = sl.Listing_ID
+        LEFT JOIN ServiceCategory sc ON sl.Category_ID = sc.Category_ID
         WHERE b.Provider_ID = %s
         ORDER BY b.Scheduled_Date DESC
     """, (session['user_id'],))
-    bookings = cursor.fetchall()
+    bookings_list = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template('provider/bookings.html', bookings=bookings)
+    status_counts = {}
+    for b in bookings_list:
+        s = b['Status']
+        status_counts[s] = status_counts.get(s, 0) + 1
+
+    return render_template('provider/bookings.html',
+                           bookings=bookings_list,
+                           status_counts=status_counts)
 
 
 @provider_bp.route('/bookings/<int:booking_id>/update', methods=['POST'])
@@ -250,7 +307,7 @@ def update_booking(booking_id):
     cursor.close()
     conn.close()
 
-    flash(f'Booking status updated to {new_status}.', 'success')
+    flash('Booking updated to {}.'.format(new_status.replace('_', ' ')), 'success')
     return redirect(url_for('provider.bookings'))
 
 
@@ -259,24 +316,55 @@ def update_booking(booking_id):
 def earnings():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
+    user_id = session['user_id']
+
     cursor.execute("""
-        SELECT p.*, b.Scheduled_Date, u.First_Name, u.Last_Name
+        SELECT p.*, b.Scheduled_Date, u.First_Name, u.Last_Name, sc.Category_Name
         FROM Payment p
         JOIN Booking b ON p.Booking_ID = b.Booking_ID
         JOIN User u ON b.Client_ID = u.User_ID
+        LEFT JOIN ServiceListing sl ON b.Listing_ID = sl.Listing_ID
+        LEFT JOIN ServiceCategory sc ON sl.Category_ID = sc.Category_ID
         WHERE b.Provider_ID = %s
         ORDER BY p.Transaction_Date DESC
-    """, (session['user_id'],))
+    """, (user_id,))
     payments = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT COALESCE(SUM(p.Amount), 0) as total, COUNT(*) as completed_count
+        FROM Payment p JOIN Booking b ON p.Booking_ID = b.Booking_ID
+        WHERE b.Provider_ID = %s AND p.Payment_Status = 'completed'
+    """, (user_id,))
+    totals = cursor.fetchone()
+    total = totals['total']
+    completed_count = totals['completed_count']
+    avg_value = float(total / completed_count) if completed_count > 0 else 0.0
 
     cursor.execute("""
         SELECT COALESCE(SUM(p.Amount), 0) as total
         FROM Payment p JOIN Booking b ON p.Booking_ID = b.Booking_ID
         WHERE b.Provider_ID = %s AND p.Payment_Status = 'completed'
-    """, (session['user_id'],))
-    total = cursor.fetchone()['total']
+          AND MONTH(p.Transaction_Date) = MONTH(CURDATE())
+          AND YEAR(p.Transaction_Date) = YEAR(CURDATE())
+    """, (user_id,))
+    this_month = cursor.fetchone()['total']
+
+    cursor.execute("""
+        SELECT COALESCE(SUM(p.Amount), 0) as total
+        FROM Payment p JOIN Booking b ON p.Booking_ID = b.Booking_ID
+        WHERE b.Provider_ID = %s AND p.Payment_Status = 'completed'
+          AND MONTH(p.Transaction_Date) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+          AND YEAR(p.Transaction_Date) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+    """, (user_id,))
+    last_month = cursor.fetchone()['total']
 
     cursor.close()
     conn.close()
 
-    return render_template('provider/earnings.html', payments=payments, total=total)
+    return render_template('provider/earnings.html',
+                           payments=payments,
+                           total=total,
+                           completed_count=completed_count,
+                           avg_value=avg_value,
+                           this_month=this_month,
+                           last_month=last_month)

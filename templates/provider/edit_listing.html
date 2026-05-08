@@ -1,5 +1,135 @@
 {% extends "base.html" %}
-{% block title %}edit_listing - HandyBridge{% endblock %}
+{% block title %}Edit Listing - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>edit_listing</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4" style="max-width: 700px;">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('provider.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link active" href="{{ url_for('provider.listings') }}"><i class="fas fa-list"></i> Listings</a>
+        <a class="nav-link" href="{{ url_for('provider.availability') }}"><i class="fas fa-clock"></i> Availability</a>
+        <a class="nav-link" href="{{ url_for('provider.bookings') }}"><i class="fas fa-calendar"></i> Bookings</a>
+        <a class="nav-link" href="{{ url_for('provider.earnings') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+    </nav>
+
+    <h2 class="mb-4"><i class="fas fa-edit text-primary"></i> Edit Listing</h2>
+
+    {% if listing %}
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <form method="POST" action="{{ url_for('provider.edit_listing', listing_id=listing.Listing_ID) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Service Category <span class="text-danger">*</span></label>
+                    <select name="category_id" class="form-select" required>
+                        {% for cat in categories %}
+                        <option value="{{ cat.Category_ID }}"
+                            {% if cat.Category_ID == listing.Category_ID %}selected{% endif %}>
+                            {{ cat.Category_Name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Listing Title <span class="text-danger">*</span></label>
+                    <input type="text" name="title" class="form-control" maxlength="100"
+                           value="{{ listing.Title }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Service Description <span class="text-danger">*</span></label>
+                    <textarea name="description" id="descField" class="form-control" rows="4"
+                              maxlength="1000" required>{{ listing.Description or '' }}</textarea>
+                    <div class="d-flex justify-content-end mt-1">
+                        <small class="text-muted"><span id="descCount">{{ (listing.Description or '')|length }}</span>/1000</small>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold">Price Per Hour</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="price_per_hour" class="form-control"
+                                   min="10" max="500" step="5"
+                                   value="{{ listing.Price_Per_Hour or '' }}">
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold">Price Per Job</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="price_per_job" class="form-control"
+                                   min="0" step="5"
+                                   value="{{ listing.Price_Per_Job or '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Service Radius (miles)</label>
+                    <div class="input-group" style="max-width: 200px;">
+                        <input type="number" name="service_radius" class="form-control"
+                               min="1" max="100"
+                               value="{{ listing.Service_Radius_Miles or '' }}">
+                        <span class="input-group-text">mi</span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active"
+                               id="isActive" {{ 'checked' if listing.Is_Active else '' }}>
+                        <label class="form-check-label fw-semibold" for="isActive">
+                            Active (visible to clients)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <a href="{{ url_for('provider.listings') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Deactivate / delete section -->
+    <div class="card border-danger mt-4">
+        <div class="card-header bg-danger text-white">
+            <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Danger Zone</h6>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Deactivating this listing hides it from clients. It does not delete existing bookings.</p>
+            <form method="POST" action="{{ url_for('provider.delete_listing', listing_id=listing.Listing_ID) }}"
+                  onsubmit="return confirm('Deactivate this listing?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-eye-slash"></i> Deactivate Listing
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="alert alert-danger">Listing not found.</div>
+    <a href="{{ url_for('provider.listings') }}" class="btn btn-secondary">Back to Listings</a>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+const descField = document.getElementById('descField');
+if (descField) {
+    descField.addEventListener('input', function() {
+        document.getElementById('descCount').textContent = this.value.length;
+    });
+}
+</script>
 {% endblock %}

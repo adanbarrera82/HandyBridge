@@ -7,10 +7,8 @@ Kept here to avoid circular imports.
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
-from flask_mail import Mail
 
 # No default limits — applied per-route where needed
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 csrf = CSRFProtect()
-mail = Mail()

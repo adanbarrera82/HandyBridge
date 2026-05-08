@@ -1,5 +1,202 @@
 {% extends "base.html" %}
-{% block title %}categories - HandyBridge{% endblock %}
+{% block title %}Manage Categories - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>Admin - categories</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a>
+        <a class="nav-link active" href="{{ url_for('admin.categories') }}"><i class="fas fa-tags"></i> Categories</a>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-tags text-primary"></i> Service Categories</h2>
+        <span class="badge bg-primary fs-6">{{ categories|length }} categories</span>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Add new category -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-plus"></i> Add New Category</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.categories') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Category Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="category_name" class="form-control"
+                                   maxlength="50" placeholder="e.g. Pest Control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea name="description" class="form-control" rows="3"
+                                      maxlength="200"
+                                      placeholder="Brief description of services in this category..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-plus"></i> Add Category
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category list -->
+        <div class="col-lg-8">
+            {% if categories %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th class="text-center">Listings</th>
+                            <th class="text-center">Bookings</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for cat in categories %}
+                    <tr id="editRow{{ cat.Category_ID }}">
+                        <td class="text-muted small">{{ cat.Category_ID }}</td>
+                        <td>
+                            <!-- View mode -->
+                            <span class="view-mode fw-semibold">{{ cat.Category_Name }}</span>
+                            <!-- Edit mode (hidden by default) -->
+                            <input type="text" class="form-control form-control-sm edit-mode d-none"
+                                   id="editName{{ cat.Category_ID }}"
+                                   value="{{ cat.Category_Name }}" maxlength="50">
+                        </td>
+                        <td>
+                            <span class="view-mode text-muted small">
+                                {{ cat.Description[:80] if cat.Description else '—' }}{{ '...' if cat.Description and cat.Description|length > 80 else '' }}
+                            </span>
+                            <textarea class="form-control form-control-sm edit-mode d-none"
+                                      id="editDesc{{ cat.Category_ID }}"
+                                      rows="2" maxlength="200">{{ cat.Description or '' }}</textarea>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-{{ 'secondary' if cat.listing_count == 0 else 'primary' }}">
+                                {{ cat.listing_count }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-{{ 'secondary' if cat.booking_count == 0 else 'success' }}">
+                                {{ cat.booking_count }}
+                            </span>
+                        </td>
+                        <td class="text-nowrap">
+                            <!-- View mode buttons -->
+                            <div class="view-mode d-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        onclick="toggleEdit({{ cat.Category_ID }})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% if cat.listing_count == 0 %}
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#deleteCatModal"
+                                        data-cat-id="{{ cat.Category_ID }}"
+                                        data-cat-name="{{ cat.Category_Name }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-secondary" disabled
+                                        title="Cannot delete — has {{ cat.listing_count }} listing(s)">
+                                    <i class="fas fa-lock"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <!-- Edit mode buttons -->
+                            <div class="edit-mode d-none d-flex gap-1">
+                                <form method="POST" action="{{ url_for('admin.categories') }}"
+                                      id="editForm{{ cat.Category_ID }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="edit_id" value="{{ cat.Category_ID }}">
+                                    <input type="hidden" id="hiddenName{{ cat.Category_ID }}" name="category_name">
+                                    <input type="hidden" id="hiddenDesc{{ cat.Category_ID }}" name="description">
+                                </form>
+                                <button type="button" class="btn btn-sm btn-success"
+                                        onclick="saveEdit({{ cat.Category_ID }})">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        onclick="cancelEdit({{ cat.Category_ID }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">No categories yet. Add one on the left.</div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<!-- Delete category modal -->
+<div class="modal fade" id="deleteCatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Delete Category
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Delete category <strong id="deleteCatName"></strong>?</p>
+                <p class="text-muted small">This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteCatForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+// Delete modal
+document.getElementById('deleteCatModal').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('deleteCatName').textContent = btn.dataset.catName;
+    document.getElementById('deleteCatForm').action = '/admin/categories/' + btn.dataset.catId + '/delete';
+});
+
+// Inline edit helpers
+function toggleEdit(id) {
+    const row = document.getElementById('editRow' + id);
+    row.querySelectorAll('.view-mode').forEach(el => el.classList.add('d-none'));
+    row.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('d-none'));
+}
+function cancelEdit(id) {
+    const row = document.getElementById('editRow' + id);
+    row.querySelectorAll('.view-mode').forEach(el => el.classList.remove('d-none'));
+    row.querySelectorAll('.edit-mode').forEach(el => el.classList.add('d-none'));
+}
+function saveEdit(id) {
+    document.getElementById('hiddenName' + id).value = document.getElementById('editName' + id).value;
+    document.getElementById('hiddenDesc' + id).value = document.getElementById('editDesc' + id).value;
+    document.getElementById('editForm' + id).submit();
+}
+</script>
 {% endblock %}

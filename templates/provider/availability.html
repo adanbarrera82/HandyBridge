@@ -1,5 +1,117 @@
 {% extends "base.html" %}
-{% block title %}availability - HandyBridge{% endblock %}
+{% block title %}Availability - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>availability</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('provider.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('provider.listings') }}"><i class="fas fa-list"></i> Listings</a>
+        <a class="nav-link active" href="{{ url_for('provider.availability') }}"><i class="fas fa-clock"></i> Availability</a>
+        <a class="nav-link" href="{{ url_for('provider.bookings') }}"><i class="fas fa-calendar"></i> Bookings</a>
+        <a class="nav-link" href="{{ url_for('provider.earnings') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+    </nav>
+
+    <h2 class="mb-4"><i class="fas fa-clock text-primary"></i> Availability Schedule</h2>
+
+    <div class="row g-4">
+
+        <!-- Add slot form -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-plus"></i> Add Availability Slot</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('provider.availability') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Day of Week <span class="text-danger">*</span></label>
+                            <select name="day_of_week" class="form-select" required>
+                                {% for day in days_order %}
+                                <option value="{{ day }}">{{ day }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Start Time <span class="text-danger">*</span></label>
+                            <input type="time" name="start_time" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">End Time <span class="text-danger">*</span></label>
+                            <input type="time" name="end_time" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-plus"></i> Add Slot
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly schedule -->
+        <div class="col-lg-8">
+            <h5 class="mb-3"><i class="fas fa-calendar-week text-secondary"></i> Weekly Schedule</h5>
+
+            {% set has_any = namespace(value=false) %}
+            {% for day in days_order %}{% if grouped[day] %}{% set has_any.value = true %}{% endif %}{% endfor %}
+
+            {% if has_any.value %}
+            <div class="list-group">
+                {% for day in days_order %}
+                {% set day_slots = grouped[day] %}
+                <div class="list-group-item p-0 mb-2 rounded border">
+                    <div class="d-flex align-items-center px-3 py-2 bg-light rounded-top border-bottom">
+                        <strong class="me-auto">
+                            <i class="fas fa-calendar-day text-primary me-2"></i>{{ day }}
+                        </strong>
+                        {% if day_slots %}
+                        <span class="badge bg-success">{{ day_slots|length }} slot{{ 's' if day_slots|length != 1 else '' }}</span>
+                        {% else %}
+                        <span class="badge bg-light text-muted border">Not set</span>
+                        {% endif %}
+                    </div>
+                    {% if day_slots %}
+                    <div class="px-3 py-2">
+                        {% for slot in day_slots %}
+                        <div class="d-flex align-items-center justify-content-between py-1 {{ 'border-top' if not loop.first else '' }}">
+                            <span>
+                                <i class="fas fa-clock text-muted me-1"></i>
+                                <strong>{{ slot.Start_Time }}</strong>
+                                <span class="text-muted mx-1">–</span>
+                                <strong>{{ slot.End_Time }}</strong>
+                            </span>
+                            <form method="POST"
+                                  action="{{ url_for('provider.delete_availability', slot_id=slot.Availability_ID) }}"
+                                  onsubmit="return confirm('Remove this slot?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="px-3 py-2 text-muted small">No slots — add one on the left.</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% else %}
+            <div class="text-center py-5 bg-light border rounded">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No availability set yet</h6>
+                <p class="text-muted small">Add slots on the left to let clients know when you're available.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
 {% endblock %}

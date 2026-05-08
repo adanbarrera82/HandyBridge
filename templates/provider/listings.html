@@ -1,5 +1,126 @@
 {% extends "base.html" %}
-{% block title %}listings - HandyBridge{% endblock %}
+{% block title %}My Listings - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>listings</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('provider.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link active" href="{{ url_for('provider.listings') }}"><i class="fas fa-list"></i> Listings</a>
+        <a class="nav-link" href="{{ url_for('provider.availability') }}"><i class="fas fa-clock"></i> Availability</a>
+        <a class="nav-link" href="{{ url_for('provider.bookings') }}"><i class="fas fa-calendar"></i> Bookings</a>
+        <a class="nav-link" href="{{ url_for('provider.earnings') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-list text-primary"></i> My Listings</h2>
+        <a href="{{ url_for('provider.new_listing') }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> New Listing
+        </a>
+    </div>
+
+    <!-- Stats row -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="card text-center border-0 bg-light">
+                <div class="card-body py-3">
+                    <h3 class="mb-0 text-dark">{{ stats.total }}</h3>
+                    <div class="text-muted small">Total Listings</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card text-center border-0 bg-success bg-opacity-10">
+                <div class="card-body py-3">
+                    <h3 class="mb-0 text-success">{{ stats.active }}</h3>
+                    <div class="text-muted small">Active</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card text-center border-0 bg-secondary bg-opacity-10">
+                <div class="card-body py-3">
+                    <h3 class="mb-0 text-secondary">{{ stats.inactive }}</h3>
+                    <div class="text-muted small">Inactive</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if listings %}
+    <div class="row g-4">
+        {% for l in listings %}
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100 {{ '' if l.Is_Active else 'border-secondary opacity-75' }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">{{ l.Category_Name }}</span>
+                    {% if l.Is_Active %}
+                    <span class="badge bg-success"><i class="fas fa-circle me-1" style="font-size:.6rem"></i>Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">{{ l.Title }}</h6>
+                    <p class="card-text text-muted small">
+                        {{ l.Description[:120] if l.Description else 'No description.' }}{{ '...' if l.Description and l.Description|length > 120 else '' }}
+                    </p>
+                    <div class="d-flex flex-wrap gap-3 mt-2">
+                        {% if l.Price_Per_Hour %}
+                        <div>
+                            <span class="text-muted small"><i class="fas fa-clock"></i> Hourly</span>
+                            <div class="fw-bold text-success">${{ "%.2f"|format(l.Price_Per_Hour) }}/hr</div>
+                        </div>
+                        {% endif %}
+                        {% if l.Price_Per_Job %}
+                        <div>
+                            <span class="text-muted small"><i class="fas fa-briefcase"></i> Per Job</span>
+                            <div class="fw-bold text-success">${{ "%.2f"|format(l.Price_Per_Job) }}</div>
+                        </div>
+                        {% endif %}
+                        {% if l.Service_Radius_Miles %}
+                        <div>
+                            <span class="text-muted small"><i class="fas fa-map-marker-alt"></i> Radius</span>
+                            <div>{{ l.Service_Radius_Miles }} mi</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Created {{ l.Date_Created.strftime('%b %d, %Y') if l.Date_Created else '' }}</small>
+                    <div class="d-flex gap-2">
+                        <!-- Toggle active -->
+                        <form method="POST" action="{{ url_for('provider.toggle_listing', listing_id=l.Listing_ID) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm {{ 'btn-outline-secondary' if l.Is_Active else 'btn-outline-success' }}"
+                                    title="{{ 'Deactivate' if l.Is_Active else 'Activate' }}">
+                                <i class="fas fa-{{ 'toggle-on' if l.Is_Active else 'toggle-off' }}"></i>
+                                {{ 'Deactivate' if l.Is_Active else 'Activate' }}
+                            </button>
+                        </form>
+                        <!-- Edit -->
+                        <a href="{{ url_for('provider.edit_listing', listing_id=l.Listing_ID) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="text-center py-5 bg-light border rounded">
+        <i class="fas fa-plus-circle fa-4x text-muted mb-3"></i>
+        <h5 class="text-muted">No listings yet</h5>
+        <p class="text-muted">Create your first listing to start receiving bookings.</p>
+        <a href="{{ url_for('provider.new_listing') }}" class="btn btn-success mt-2">
+            <i class="fas fa-plus"></i> Create Your First Listing
+        </a>
+    </div>
+    {% endif %}
+
+</div>
 {% endblock %}

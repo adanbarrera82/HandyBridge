@@ -1,5 +1,167 @@
 {% extends "base.html" %}
-{% block title %}bookings - HandyBridge{% endblock %}
+{% block title %}Bookings - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>bookings</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('provider.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('provider.listings') }}"><i class="fas fa-list"></i> Listings</a>
+        <a class="nav-link" href="{{ url_for('provider.availability') }}"><i class="fas fa-clock"></i> Availability</a>
+        <a class="nav-link active" href="{{ url_for('provider.bookings') }}"><i class="fas fa-calendar"></i> Bookings</a>
+        <a class="nav-link" href="{{ url_for('provider.earnings') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+    </nav>
+
+    <h2 class="mb-4"><i class="fas fa-calendar text-primary"></i> Client Bookings</h2>
+
+    <!-- Status counts -->
+    {% if status_counts %}
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        {% set sc = status_counts %}
+        {% if sc.get('pending') %}
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+            <i class="fas fa-hourglass-half"></i> {{ sc.get('pending', 0) }} Pending
+        </span>
+        {% endif %}
+        {% if sc.get('confirmed') %}
+        <span class="badge bg-info fs-6 px-3 py-2">
+            <i class="fas fa-check"></i> {{ sc.get('confirmed', 0) }} Confirmed
+        </span>
+        {% endif %}
+        {% if sc.get('in_progress') %}
+        <span class="badge bg-primary fs-6 px-3 py-2">
+            <i class="fas fa-spinner"></i> {{ sc.get('in_progress', 0) }} In Progress
+        </span>
+        {% endif %}
+        {% if sc.get('completed') %}
+        <span class="badge bg-success fs-6 px-3 py-2">
+            <i class="fas fa-check-circle"></i> {{ sc.get('completed', 0) }} Completed
+        </span>
+        {% endif %}
+        {% if sc.get('cancelled') %}
+        <span class="badge bg-secondary fs-6 px-3 py-2">
+            <i class="fas fa-times-circle"></i> {{ sc.get('cancelled', 0) }} Cancelled
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if bookings %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Client</th>
+                    <th>Service</th>
+                    <th>Date &amp; Time</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for b in bookings %}
+            {% set status_color = {
+                'pending':    'warning',
+                'confirmed':  'info',
+                'in_progress':'primary',
+                'completed':  'success',
+                'cancelled':  'secondary'
+            }.get(b.Status, 'secondary') %}
+            <tr>
+                <td class="text-muted small">{{ b.Booking_ID }}</td>
+                <td>
+                    <div class="fw-semibold">{{ b.client_first }} {{ b.client_last }}</div>
+                    {% if b.client_phone %}
+                    <small class="text-muted"><i class="fas fa-phone"></i> {{ b.client_phone }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ b.Category_Name or '—' }}</td>
+                <td>
+                    <div>{{ b.Scheduled_Date }}</div>
+                    <small class="text-muted">{{ b.Scheduled_Start_Time }} – {{ b.Scheduled_End_Time }}</small>
+                </td>
+                <td>
+                    {% if b.Total_Amount %}
+                    <strong>${{ "%.2f"|format(b.Total_Amount) }}</strong>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-{{ status_color }}">
+                        {{ b.Status | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td class="text-nowrap">
+                    {% if b.Status == 'pending' %}
+                    <!-- Accept -->
+                    <form method="POST" action="{{ url_for('provider.update_booking', booking_id=b.Booking_ID) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="confirmed">
+                        <button class="btn btn-sm btn-success mb-1"><i class="fas fa-check"></i> Accept</button>
+                    </form>
+                    <!-- Decline -->
+                    <form method="POST" action="{{ url_for('provider.update_booking', booking_id=b.Booking_ID) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="cancelled">
+                        <button class="btn btn-sm btn-outline-danger mb-1"
+                                onclick="return confirm('Decline this booking?')">
+                            <i class="fas fa-times"></i> Decline
+                        </button>
+                    </form>
+
+                    {% elif b.Status == 'confirmed' %}
+                    <!-- Start Service -->
+                    <form method="POST" action="{{ url_for('provider.update_booking', booking_id=b.Booking_ID) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="in_progress">
+                        <button class="btn btn-sm btn-primary mb-1"><i class="fas fa-play"></i> Start</button>
+                    </form>
+                    <!-- Cancel -->
+                    <form method="POST" action="{{ url_for('provider.update_booking', booking_id=b.Booking_ID) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="cancelled">
+                        <button class="btn btn-sm btn-outline-danger mb-1"
+                                onclick="return confirm('Cancel this booking?')">
+                            <i class="fas fa-ban"></i> Cancel
+                        </button>
+                    </form>
+
+                    {% elif b.Status == 'in_progress' %}
+                    <form method="POST" action="{{ url_for('provider.update_booking', booking_id=b.Booking_ID) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="completed">
+                        <button class="btn btn-sm btn-success"
+                                onclick="return confirm('Mark as completed?')">
+                            <i class="fas fa-flag-checkered"></i> Complete
+                        </button>
+                    </form>
+
+                    {% elif b.Status == 'completed' %}
+                    <span class="text-success small"><i class="fas fa-check-circle"></i> Done</span>
+
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5 bg-light border rounded">
+        <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+        <h5 class="text-muted">No bookings yet</h5>
+        <p class="text-muted">Make sure your listings are active so clients can book your services.</p>
+        <a href="{{ url_for('provider.listings') }}" class="btn btn-outline-primary mt-2">
+            <i class="fas fa-list"></i> View My Listings
+        </a>
+    </div>
+    {% endif %}
+
+</div>
 {% endblock %}

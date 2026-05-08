@@ -6,7 +6,7 @@ CSCI 4333 - Database Design and Implementation
 
 import os
 import logging
-from datetime import timedelta
+from datetime import timedelta, date
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_talisman import Talisman
 
@@ -16,7 +16,7 @@ from routes.provider import provider_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
 from routes.account import account_bp
-from utils.extensions import csrf, limiter, mail
+from utils.extensions import csrf, limiter
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -41,15 +41,6 @@ app.config.update(
 # ============ EXTENSIONS ============
 csrf.init_app(app)
 limiter.init_app(app)
-
-# Flask-Mail configuration
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'onboarding@resend.dev')
-mail.init_app(app)
 
 # ============ SECURITY HEADERS ============
 _csp = {
@@ -195,12 +186,23 @@ def provider_profile(provider_id):
     cursor.close()
     conn.close()
 
+    # Time slots: 6:00 AM – 9:30 PM in 30-minute increments
+    time_slots = []
+    for h in range(6, 22):
+        for m in (0, 30):
+            val = f"{h:02d}:{m:02d}"
+            h12 = h % 12 or 12
+            ampm = "AM" if h < 12 else "PM"
+            time_slots.append({"value": val, "label": f"{h12}:{m:02d} {ampm}"})
+
     return render_template('public/provider_profile.html',
                            provider=provider,
                            listings=listings,
                            availability=availability,
                            reviews=reviews,
-                           avg_rating=avg_rating)
+                           avg_rating=avg_rating,
+                           time_slots=time_slots,
+                           today_str=date.today().isoformat())
 
 
 # ============ ERROR HANDLERS ============

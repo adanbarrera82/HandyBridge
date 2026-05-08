@@ -1,5 +1,194 @@
 {% extends "base.html" %}
-{% block title %}service_request - HandyBridge{% endblock %}
+{% block title %}Service Requests - HandyBridge{% endblock %}
+
 {% block content %}
-<div class="container py-4"><h2>service_request</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('client.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('client.bookings') }}"><i class="fas fa-calendar-check"></i> My Bookings</a>
+        <a class="nav-link active" href="{{ url_for('client.service_request') }}"><i class="fas fa-clipboard-list"></i> Requests</a>
+        <a class="nav-link" href="{{ url_for('client.settings') }}"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+
+    <h2 class="mb-4"><i class="fas fa-clipboard-list text-primary"></i> Service Requests</h2>
+
+    <div class="row g-4">
+
+        <!-- Submit new request -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle"></i> New Request</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('client.service_request') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Service Category <span class="text-danger">*</span></label>
+                            <select name="category_id" class="form-select" required>
+                                <option value="" disabled selected>Select a category</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.Category_ID }}">{{ cat.Category_Name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Request Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" maxlength="100"
+                                   placeholder="e.g. Leaking pipe in kitchen" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea name="description" id="descField" class="form-control" rows="3"
+                                      maxlength="1000"
+                                      placeholder="Describe the problem in detail..."></textarea>
+                            <div class="d-flex justify-content-end mt-1">
+                                <small class="text-muted"><span id="descCount">0</span>/1000</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Urgency <span class="text-danger">*</span></label>
+                            <select name="urgency" class="form-select" required>
+                                <option value="low">Low — Flexible timing</option>
+                                <option value="medium" selected>Medium — Within the week</option>
+                                <option value="high">High — Within 1-2 days</option>
+                                <option value="emergency">Emergency — ASAP</option>
+                            </select>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">Preferred Date</label>
+                                <input type="date" name="preferred_date" class="form-control">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">Preferred Time</label>
+                                <input type="time" name="preferred_time" class="form-control">
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+                        <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt"></i> Service Location</p>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Street Address <span class="text-danger">*</span></label>
+                            <input type="text" name="service_address" class="form-control" maxlength="100"
+                                   value="{{ user.Street_Address or '' }}" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">City <span class="text-danger">*</span></label>
+                                <input type="text" name="service_city" class="form-control"
+                                       value="{{ user.City or '' }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">State <span class="text-danger">*</span></label>
+                                <input type="text" name="service_state" class="form-control" maxlength="2"
+                                       value="{{ user.State or '' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Zip <span class="text-danger">*</span></label>
+                                <input type="text" name="service_zip" class="form-control" maxlength="10"
+                                       value="{{ user.Zip_Code or '' }}" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-paper-plane"></i> Submit Request
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Past requests -->
+        <div class="col-lg-7">
+            <h5 class="mb-3"><i class="fas fa-history text-secondary"></i> Past Requests</h5>
+
+            {% if past_requests %}
+            {% set urgency_colors = {'low': 'success', 'medium': 'warning', 'high': 'danger', 'emergency': 'dark'} %}
+            {% set status_colors  = {'open': 'warning', 'matched': 'success', 'in_progress': 'info', 'completed': 'success', 'cancelled': 'secondary'} %}
+
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Title</th>
+                            <th>Urgency</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in past_requests %}
+                    <tr class="{{ 'text-muted' if r.Status == 'cancelled' else '' }}">
+                        <td class="text-nowrap small">{{ r.Date_Created.strftime('%b %d, %Y') if r.Date_Created else '—' }}</td>
+                        <td>{{ r.Category_Name }}</td>
+                        <td>
+                            <span title="{{ r.Title }}">
+                                {{ r.Title[:50] }}{{ '...' if r.Title|length > 50 else '' }}
+                            </span>
+                            {% if r.Description %}
+                            <div class="text-muted small">{{ r.Description[:80] }}{{ '...' if r.Description|length > 80 else '' }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ urgency_colors.get(r.Urgency, 'secondary') }} text-{{ 'dark' if r.Urgency in ('low', 'medium') else 'white' }}">
+                                {{ r.Urgency | title }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ status_colors.get(r.Status, 'secondary') }} text-{{ 'dark' if r.Status == 'open' else 'white' }}">
+                                {{ r.Status | replace('_', ' ') | title }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if r.Status in ('open', 'in_progress') %}
+                            <form method="POST"
+                                  action="{{ url_for('client.cancel_request', request_id=r.Request_ID) }}"
+                                  class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Cancel this service request? This cannot be undone.')">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% else %}
+            <div class="text-center py-5 text-muted border rounded bg-light">
+                <i class="fas fa-clipboard fa-3x mb-3"></i>
+                <p class="mb-0">No past requests yet.</p>
+                <p class="small">Submit a request on the left to get started.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+document.getElementById('descField').addEventListener('input', function() {
+    document.getElementById('descCount').textContent = this.value.length;
+});
+</script>
 {% endblock %}

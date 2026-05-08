@@ -1,5 +1,113 @@
 {% extends "base.html" %}
-{% block title %}new_listing - HandyBridge{% endblock %}
+{% block title %}New Listing - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>new_listing</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4" style="max-width: 700px;">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('provider.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link active" href="{{ url_for('provider.listings') }}"><i class="fas fa-list"></i> Listings</a>
+        <a class="nav-link" href="{{ url_for('provider.availability') }}"><i class="fas fa-clock"></i> Availability</a>
+        <a class="nav-link" href="{{ url_for('provider.bookings') }}"><i class="fas fa-calendar"></i> Bookings</a>
+        <a class="nav-link" href="{{ url_for('provider.earnings') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+    </nav>
+
+    <h2 class="mb-4"><i class="fas fa-plus-circle text-success"></i> Create New Listing</h2>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <form method="POST" action="{{ url_for('provider.new_listing') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Service Category <span class="text-danger">*</span></label>
+                    <select name="category_id" class="form-select" required>
+                        <option value="" disabled selected>Select a category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.Category_ID }}">{{ cat.Category_Name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Listing Title <span class="text-danger">*</span></label>
+                    <input type="text" name="title" class="form-control" maxlength="100"
+                           placeholder="e.g. Expert Plumbing &amp; Drain Services" required>
+                    <div class="form-text">A clear, concise title that describes your service.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Service Description <span class="text-danger">*</span></label>
+                    <textarea name="description" id="descField" class="form-control" rows="4"
+                              maxlength="1000" required
+                              placeholder="Describe what you offer, your experience, and what clients can expect..."></textarea>
+                    <div class="d-flex justify-content-end mt-1">
+                        <small class="text-muted"><span id="descCount">0</span>/1000</small>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold">
+                            Price Per Hour <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="price_per_hour" class="form-control"
+                                   min="10" max="500" step="5" placeholder="e.g. 65" required>
+                        </div>
+                        <div class="form-text">Min $10 — Max $500</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold">Price Per Job <span class="text-muted fw-normal">(optional)</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="price_per_job" class="form-control"
+                                   min="0" step="5" placeholder="e.g. 200">
+                        </div>
+                        <div class="form-text">Fixed rate for a complete job.</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        Service Radius <span class="text-muted fw-normal">(miles, optional)</span>
+                    </label>
+                    <div class="input-group" style="max-width: 200px;">
+                        <input type="number" name="service_radius" class="form-control"
+                               min="1" max="100" placeholder="e.g. 25">
+                        <span class="input-group-text">mi</span>
+                    </div>
+                    <div class="form-text">How far are you willing to travel?</div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active"
+                               id="isActive" checked>
+                        <label class="form-check-label fw-semibold" for="isActive">
+                            Active (visible to clients immediately)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Create Listing
+                    </button>
+                    <a href="{{ url_for('provider.listings') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+document.getElementById('descField').addEventListener('input', function() {
+    document.getElementById('descCount').textContent = this.value.length;
+});
+</script>
 {% endblock %}

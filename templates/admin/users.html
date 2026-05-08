@@ -1,5 +1,174 @@
 {% extends "base.html" %}
-{% block title %}users - HandyBridge{% endblock %}
+{% block title %}Manage Users - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>Admin - users</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link active" href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a>
+        <a class="nav-link" href="{{ url_for('admin.categories') }}"><i class="fas fa-tags"></i> Categories</a>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0"><i class="fas fa-users text-primary"></i> All Users</h2>
+        <span class="badge bg-primary fs-6">{{ users|length }} total</span>
+    </div>
+
+    <!-- Search / filter bar -->
+    <div class="row g-2 mb-4">
+        <div class="col-sm-6">
+            <input type="text" id="searchInput" class="form-control"
+                   placeholder="Search by name or email...">
+        </div>
+        <div class="col-sm-4">
+            <select id="typeFilter" class="form-select">
+                <option value="">All account types</option>
+                <option value="client">Client</option>
+                <option value="provider">Provider</option>
+                <option value="both">Both</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+    </div>
+
+    {% set type_colors = {'client': 'primary', 'provider': 'success', 'both': 'info', 'admin': 'danger'} %}
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle" id="usersTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Account Type</th>
+                    <th>Registered</th>
+                    <th>Change Type</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+            <tr data-name="{{ u.First_Name }} {{ u.Last_Name }}"
+                data-email="{{ u.Email }}"
+                data-type="{{ u.Account_Type }}">
+                <td class="text-muted small">{{ u.User_ID }}</td>
+                <td>
+                    <div class="fw-semibold">{{ u.First_Name }} {{ u.Last_Name }}</div>
+                    {% if u.City and u.State %}
+                    <small class="text-muted">{{ u.City }}, {{ u.State }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="mailto:{{ u.Email }}" class="text-decoration-none">{{ u.Email }}</a>
+                    {% if u.Phone %}
+                    <div><small class="text-muted">{{ u.Phone }}</small></div>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-{{ type_colors.get(u.Account_Type, 'secondary') }}">
+                        {{ u.Account_Type | title }}
+                    </span>
+                </td>
+                <td class="text-muted small text-nowrap">
+                    {{ u.Date_Registered.strftime('%b %d, %Y') if u.Date_Registered else '—' }}
+                </td>
+                <td>
+                    {% if u.User_ID != session.get('user_id') %}
+                    <form method="POST" action="{{ url_for('admin.update_user_type', user_id=u.User_ID) }}"
+                          class="d-flex gap-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="account_type" class="form-select form-select-sm" style="width:100px">
+                            {% for t in ['client', 'provider', 'both', 'admin'] %}
+                            <option value="{{ t }}" {{ 'selected' if u.Account_Type == t else '' }}>
+                                {{ t | title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-save"></i>
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted small"><i class="fas fa-lock"></i> You</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if u.User_ID != session.get('user_id') %}
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteModal"
+                            data-user-id="{{ u.User_ID }}"
+                            data-user-name="{{ u.First_Name }} {{ u.Last_Name }}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% else %}
+                    <span class="text-muted small">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if not users %}
+    <div class="text-center py-4 text-muted">No users found.</div>
+    {% endif %}
+
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-danger">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Delete User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete <strong id="deleteUserName"></strong>?</p>
+                <p class="text-muted small">All associated data (bookings, reviews, listings, notifications) will be deleted. This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+// Delete modal wiring
+document.getElementById('deleteModal').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('deleteUserName').textContent = btn.dataset.userName;
+    document.getElementById('deleteForm').action = '/admin/users/' + btn.dataset.userId + '/delete';
+});
+
+// Live search + type filter
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const type = document.getElementById('typeFilter').value;
+    document.querySelectorAll('#usersTable tbody tr').forEach(function(row) {
+        const name = (row.dataset.name || '').toLowerCase();
+        const email = (row.dataset.email || '').toLowerCase();
+        const rowType = row.dataset.type || '';
+        const matchSearch = !search || name.includes(search) || email.includes(search);
+        const matchType = !type || rowType === type;
+        row.style.display = (matchSearch && matchType) ? '' : 'none';
+    });
+}
+document.getElementById('searchInput').addEventListener('input', filterTable);
+document.getElementById('typeFilter').addEventListener('change', filterTable);
+</script>
 {% endblock %}

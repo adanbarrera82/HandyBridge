@@ -1,5 +1,106 @@
 {% extends "base.html" %}
-{% block title %}earnings - HandyBridge{% endblock %}
+{% block title %}Earnings - HandyBridge{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>earnings</h2><p>TODO: Build out this page.</p></div>
+<div class="container py-4">
+
+    <!-- Section nav -->
+    <nav class="nav nav-pills bg-light border rounded p-2 mb-4 flex-wrap gap-1">
+        <a class="nav-link" href="{{ url_for('provider.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" href="{{ url_for('provider.listings') }}"><i class="fas fa-list"></i> Listings</a>
+        <a class="nav-link" href="{{ url_for('provider.availability') }}"><i class="fas fa-clock"></i> Availability</a>
+        <a class="nav-link" href="{{ url_for('provider.bookings') }}"><i class="fas fa-calendar"></i> Bookings</a>
+        <a class="nav-link active" href="{{ url_for('provider.earnings') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+    </nav>
+
+    <h2 class="mb-4"><i class="fas fa-dollar-sign text-success"></i> Earnings</h2>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-success text-white text-center">
+                <div class="card-body">
+                    <div class="small opacity-75 mb-1"><i class="fas fa-coins"></i> Total Earned</div>
+                    <h3 class="mb-0">${{ "%.2f"|format(total) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-primary text-white text-center">
+                <div class="card-body">
+                    <div class="small opacity-75 mb-1"><i class="fas fa-calendar-check"></i> This Month</div>
+                    <h3 class="mb-0">${{ "%.2f"|format(this_month) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-secondary text-white text-center">
+                <div class="card-body">
+                    <div class="small opacity-75 mb-1"><i class="fas fa-calendar"></i> Last Month</div>
+                    <h3 class="mb-0">${{ "%.2f"|format(last_month) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-warning text-dark text-center">
+                <div class="card-body">
+                    <div class="small opacity-75 mb-1"><i class="fas fa-chart-bar"></i> Avg Per Job</div>
+                    <h3 class="mb-0">${{ "%.2f"|format(avg_value) }}</h3>
+                    <div class="small opacity-75">{{ completed_count }} completed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payments table -->
+    <h5 class="mb-3"><i class="fas fa-receipt text-secondary"></i> Payment History</h5>
+
+    {% if payments %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Service</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in payments %}
+            {% set pstatus_color = {'completed': 'success', 'pending': 'warning', 'refunded': 'info', 'failed': 'danger'}.get(p.Payment_Status, 'secondary') %}
+            <tr>
+                <td class="text-nowrap text-muted small">
+                    {{ p.Transaction_Date.strftime('%b %d, %Y') if p.Transaction_Date else '—' }}
+                </td>
+                <td>{{ p.First_Name }} {{ p.Last_Name }}</td>
+                <td>{{ p.Category_Name or '—' }}</td>
+                <td>
+                    <span class="text-capitalize">{{ p.Payment_Method | replace('_', ' ') }}</span>
+                </td>
+                <td><strong class="text-success">${{ "%.2f"|format(p.Amount) }}</strong></td>
+                <td>
+                    <span class="badge bg-{{ pstatus_color }}">
+                        {{ p.Payment_Status | title }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5 bg-light border rounded">
+        <i class="fas fa-money-bill-wave fa-4x text-muted mb-3"></i>
+        <h5 class="text-muted">No earnings yet</h5>
+        <p class="text-muted">Complete bookings to start earning.</p>
+        <a href="{{ url_for('provider.bookings') }}" class="btn btn-outline-primary mt-2">
+            <i class="fas fa-calendar"></i> View Bookings
+        </a>
+    </div>
+    {% endif %}
+
+</div>
 {% endblock %}

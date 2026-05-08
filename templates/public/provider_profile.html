@@ -1,40 +1,49 @@
 {% extends "base.html" %}
 {% block title %}{{ provider.First_Name }} {{ provider.Last_Name }} - HandyBridge{% endblock %}
+
 {% block content %}
 <div class="container py-4">
 
-    <a href="{{ url_for('search') }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}" class="btn btn-outline-secondary btn-sm mb-4">
+    <a href="{{ url_for('search') }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}"
+       class="btn btn-outline-secondary btn-sm mb-4">
         <i class="fas fa-arrow-left"></i> Back to Results
     </a>
 
-    <!-- Provider Header -->
+    <!-- Provider header -->
     <div class="card mb-4 shadow-sm">
         <div class="card-body">
             <div class="d-flex align-items-center gap-3">
                 {% if provider.Profile_Image_URL %}
-                <img src="{{ provider.Profile_Image_URL }}" alt="Profile" class="rounded-circle" style="width:80px;height:80px;object-fit:cover;">
+                <img src="{{ provider.Profile_Image_URL }}" alt="Profile"
+                     class="rounded-circle flex-shrink-0"
+                     style="width:80px;height:80px;object-fit:cover;">
                 {% else %}
-                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold fs-3 flex-shrink-0" style="width:80px;height:80px;">
+                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center
+                            text-white fw-bold fs-3 flex-shrink-0"
+                     style="width:80px;height:80px;">
                     {{ provider.First_Name[0] }}{{ provider.Last_Name[0] }}
                 </div>
                 {% endif %}
                 <div>
                     <h2 class="mb-1">{{ provider.First_Name }} {{ provider.Last_Name }}</h2>
-                    <p class="text-muted mb-1"><i class="fas fa-map-marker-alt"></i> {{ provider.City }}, {{ provider.State }}</p>
+                    <p class="text-muted mb-1">
+                        <i class="fas fa-map-marker-alt"></i> {{ provider.City }}, {{ provider.State }}
+                    </p>
                     {% if provider.bg_check_status == 'passed' %}
-                    <span class="badge bg-success me-2"><i class="fas fa-shield-alt"></i> Background Checked</span>
+                    <span class="badge bg-success me-2">
+                        <i class="fas fa-shield-alt"></i> Background Checked
+                    </span>
                     {% endif %}
                     <div class="mt-1">
                         <span class="text-warning">
                             {% for i in range(5) %}
-                            {% if i < avg_rating|round %}
-                            <i class="fas fa-star"></i>
-                            {% else %}
-                            <i class="far fa-star"></i>
-                            {% endif %}
+                            <i class="fa{{ 's' if i < avg_rating|round else 'r' }} fa-star"></i>
                             {% endfor %}
                         </span>
-                        <small class="text-muted ms-1">{{ "%.1f"|format(avg_rating) }} ({{ reviews|length }} review{{ 's' if reviews|length != 1 }})</small>
+                        <small class="text-muted ms-1">
+                            {{ "%.1f"|format(avg_rating) }}
+                            ({{ reviews|length }} review{{ 's' if reviews|length != 1 }})
+                        </small>
                     </div>
                 </div>
             </div>
@@ -42,7 +51,8 @@
     </div>
 
     <div class="row g-4">
-        <!-- Left column: listings + reviews -->
+
+        <!-- ── Left column: services + reviews ── -->
         <div class="col-lg-8">
 
             <h4 class="mb-3">Services Offered</h4>
@@ -55,23 +65,22 @@
                             <span class="badge bg-secondary mb-1">{{ l.Category_Name }}</span>
                             <h6 class="card-title mb-1">{{ l.Title }}</h6>
                             {% if l.Description %}
-                            <p class="text-muted small mb-2">{{ l.Description }}</p>
+                            <p class="text-muted small mb-2">{{ l.Description[:120] }}{{ '...' if l.Description|length > 120 }}</p>
                             {% endif %}
                             {% if l.Price_Per_Hour %}
-                            <p class="mb-1 fw-semibold">${{ "%.2f"|format(l.Price_Per_Hour) }}/hr</p>
+                            <p class="mb-0 fw-semibold text-success">
+                                ${{ "%.2f"|format(l.Price_Per_Hour) }}/hr
+                            </p>
                             {% endif %}
                             {% if l.Price_Per_Job %}
-                            <p class="mb-1 fw-semibold">${{ "%.2f"|format(l.Price_Per_Job) }} flat rate</p>
+                            <p class="mb-0 fw-semibold text-success">
+                                ${{ "%.2f"|format(l.Price_Per_Job) }} flat rate
+                            </p>
                             {% endif %}
                             {% if l.Service_Radius_Miles %}
-                            <p class="text-muted small mb-0"><i class="fas fa-car"></i> Within {{ l.Service_Radius_Miles }} miles</p>
-                            {% endif %}
-                        </div>
-                        <div class="card-footer bg-transparent">
-                            {% if session.get('user_id') %}
-                            <a href="{{ url_for('client.service_request') }}?listing_id={{ l.Listing_ID }}" class="btn btn-primary btn-sm w-100">Book Now</a>
-                            {% else %}
-                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm w-100">Login to Book</a>
+                            <p class="text-muted small mb-0 mt-1">
+                                <i class="fas fa-car"></i> Within {{ l.Service_Radius_Miles }} miles
+                            </p>
                             {% endif %}
                         </div>
                     </div>
@@ -93,11 +102,7 @@
                     </div>
                     <div class="text-warning my-1">
                         {% for i in range(5) %}
-                        {% if i < r.Rating %}
-                        <i class="fas fa-star"></i>
-                        {% else %}
-                        <i class="far fa-star"></i>
-                        {% endif %}
+                        <i class="fa{{ 's' if i < r.Rating else 'r' }} fa-star"></i>
                         {% endfor %}
                     </div>
                     {% if r.Comment %}
@@ -112,25 +117,242 @@
 
         </div>
 
-        <!-- Right column: availability -->
+        <!-- ── Right column: booking + availability (sticky) ── -->
         <div class="col-lg-4">
-            <h4 class="mb-3">Availability</h4>
-            {% if availability %}
-            <div class="card shadow-sm">
-                <ul class="list-group list-group-flush">
-                    {% for slot in availability %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="fw-semibold">{{ slot.Day_Of_Week }}</span>
-                        <span class="text-muted small">{{ slot.Start_Time }} – {{ slot.End_Time }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% else %}
-            <p class="text-muted">No availability listed.</p>
-            {% endif %}
-        </div>
-    </div>
+            <div class="sticky-top" style="top: 72px;">
 
-</div>
+                {% set uid  = session.get('user_id') %}
+                {% set acct = session.get('account_type') %}
+                {% set can_book = uid and acct in ['client', 'both'] and provider.User_ID != uid %}
+
+                <!-- ── BOOKING FORM (logged-in client) ── -->
+                {% if can_book %}
+                {% if listings %}
+                <div class="card shadow border-primary mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-plus"></i>
+                            Book {{ provider.First_Name }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST"
+                              action="{{ url_for('client.book_provider', provider_id=provider.User_ID) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <!-- Service -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Service <span class="text-danger">*</span>
+                                </label>
+                                <select name="listing_id" id="serviceSelect"
+                                        class="form-select" required>
+                                    <option value="">Choose a service…</option>
+                                    {% for l in listings %}
+                                    <option value="{{ l.Listing_ID }}"
+                                            data-price="{{ l.Price_Per_Hour or 0 }}"
+                                            data-flat="{{ l.Price_Per_Job or 0 }}">
+                                        {{ l.Category_Name }} — {{ l.Title }}
+                                        {% if l.Price_Per_Hour %}
+                                            (${{ "%.2f"|format(l.Price_Per_Hour) }}/hr)
+                                        {% elif l.Price_Per_Job %}
+                                            (${{ "%.2f"|format(l.Price_Per_Job) }} flat)
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Date -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Preferred Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" name="service_date" id="dateInput"
+                                       class="form-control" min="{{ today_str }}" required>
+                            </div>
+
+                            <!-- Start Time -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Start Time <span class="text-danger">*</span>
+                                </label>
+                                <select name="start_time" class="form-select" required>
+                                    {% for ts in time_slots %}
+                                    <option value="{{ ts.value }}"
+                                        {{ 'selected' if ts.value == '09:00' else '' }}>
+                                        {{ ts.label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Duration -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Duration <span class="text-danger">*</span>
+                                </label>
+                                <select name="duration" id="durationSelect"
+                                        class="form-select" required>
+                                    <option value="1">1 hour</option>
+                                    <option value="2" selected>2 hours</option>
+                                    <option value="3">3 hours</option>
+                                    <option value="4">4 hours</option>
+                                    <option value="5">5 hours</option>
+                                    <option value="6">6 hours</option>
+                                    <option value="7">7 hours</option>
+                                    <option value="8">8 hours</option>
+                                </select>
+                            </div>
+
+                            <!-- Price estimate -->
+                            <div id="priceEstimate"
+                                 class="alert alert-info small py-2 mb-3">
+                                Select a service to see price estimate.
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Additional Details
+                                    <span class="text-muted fw-normal">(optional)</span>
+                                </label>
+                                <textarea name="notes" id="notesField"
+                                          class="form-control" rows="3"
+                                          maxlength="500"
+                                          placeholder="Specific requirements, access instructions, etc."></textarea>
+                                <div class="d-flex justify-content-end mt-1">
+                                    <small class="text-muted">
+                                        <span id="notesCount">0</span>/500
+                                    </small>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-calendar-check"></i> Request Booking
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {% else %}
+                <!-- Provider has no active listings -->
+                <div class="card shadow-sm mb-4 border-warning">
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-tools fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">
+                            This provider has no available services at the moment.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ── NOT LOGGED IN ── -->
+                {% elif not uid %}
+                <div class="card shadow-sm mb-4 border-primary">
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-lock fa-2x text-primary mb-3"></i>
+                        <h6 class="fw-semibold mb-2">Want to hire {{ provider.First_Name }}?</h6>
+                        <p class="text-muted small mb-3">
+                            Sign in with a client account to request a booking.
+                        </p>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-sign-in-alt"></i> Login to Book
+                        </a>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                No account?
+                                <a href="{{ url_for('auth.register') }}">Sign up free</a>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── PROVIDER / ADMIN VIEWING ── -->
+                {% else %}
+                <div class="alert alert-secondary mb-4">
+                    <i class="fas fa-info-circle"></i>
+                    {% if provider.User_ID == uid %}
+                        This is your own profile.
+                    {% else %}
+                        Sign in as a <strong>client</strong> account to book services.
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Availability -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light fw-semibold">
+                        <i class="fas fa-clock text-secondary"></i> Availability
+                    </div>
+                    {% if availability %}
+                    <ul class="list-group list-group-flush">
+                        {% for slot in availability %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <span class="fw-semibold small">{{ slot.Day_Of_Week }}</span>
+                            <span class="text-muted small">
+                                {{ slot.Start_Time }} – {{ slot.End_Time }}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="card-body">
+                        <p class="text-muted small mb-0">No availability listed.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div><!-- /sticky-top -->
+        </div><!-- /col-lg-4 -->
+
+    </div><!-- /row -->
+</div><!-- /container -->
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+// ── Price estimate ──────────────────────────────────────────────
+const serviceSelect  = document.getElementById('serviceSelect');
+const durationSelect = document.getElementById('durationSelect');
+const priceBox       = document.getElementById('priceEstimate');
+
+function updateEstimate() {
+    if (!serviceSelect) return;
+    const opt      = serviceSelect.options[serviceSelect.selectedIndex];
+    const duration = parseInt(durationSelect.value) || 1;
+    const hourly   = parseFloat(opt.dataset.price) || 0;
+    const flat     = parseFloat(opt.dataset.flat)  || 0;
+
+    if (!opt.value) {
+        priceBox.innerHTML = 'Select a service to see price estimate.';
+        return;
+    }
+    if (hourly > 0) {
+        const est = (hourly * duration).toFixed(2);
+        priceBox.innerHTML =
+            '<strong>Estimated Cost: $' + est + '</strong><br>' +
+            '<span class="text-muted">' + duration + ' hr × $' + hourly.toFixed(2) +
+            '/hr. Final price may vary.</span>';
+    } else if (flat > 0) {
+        priceBox.innerHTML =
+            '<strong>Flat Rate: $' + flat.toFixed(2) + '</strong><br>' +
+            '<span class="text-muted">Fixed rate for this service.</span>';
+    } else {
+        priceBox.innerHTML = 'Price to be agreed with provider.';
+    }
+}
+
+if (serviceSelect)  serviceSelect.addEventListener('change', updateEstimate);
+if (durationSelect) durationSelect.addEventListener('change', updateEstimate);
+
+// ── Notes character counter ─────────────────────────────────────
+const notesField = document.getElementById('notesField');
+const notesCount = document.getElementById('notesCount');
+if (notesField) {
+    notesField.addEventListener('input', function() {
+        notesCount.textContent = this.value.length;
+    });
+}
+</script>
 {% endblock %}
